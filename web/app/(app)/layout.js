@@ -4,6 +4,7 @@ import { LayoutDashboard, MessageSquare, Bot } from "lucide-react"
 import config from "@/config"
 import { getUser } from "@/lib/supabase/server"
 import UserMenu from "@/components/auth/UserMenu"
+import Logo from "@/components/Logo"
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -22,7 +23,7 @@ export default async function AppLayout({ children }) {
       <header className="sticky top-0 z-40 border-b border-base-200 bg-base-100">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-            <span className="inline-block size-7 rounded-lg bg-primary" aria-hidden />
+            <Logo className="size-7" />
             {config.brand.logoText}
           </Link>
           <UserMenu user={user} />

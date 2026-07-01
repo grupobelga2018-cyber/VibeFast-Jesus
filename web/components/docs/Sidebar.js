@@ -1,6 +1,11 @@
-import Link from "next/link"
+"use client"
 
-export default function Sidebar({ tree, activeHref }) {
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
+export default function Sidebar({ tree, onNavigate }) {
+  const pathname = usePathname()
+
   return (
     <nav className="space-y-6 text-sm">
       {tree.map((section) => (
@@ -10,11 +15,13 @@ export default function Sidebar({ tree, activeHref }) {
           </p>
           <ul className="space-y-0.5">
             {section.pages.map((page) => {
-              const isActive = page.href === activeHref
+              const isActive = page.href === pathname
               return (
                 <li key={page.href}>
                   <Link
                     href={page.href}
+                    onClick={onNavigate}
+                    aria-current={isActive ? "page" : undefined}
                     className={
                       "block rounded-md px-2 py-1.5 transition " +
                       (isActive

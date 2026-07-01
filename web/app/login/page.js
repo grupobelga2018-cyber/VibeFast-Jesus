@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import config from "@/config"
 import { getUser } from "@/lib/supabase/server"
 import GoogleButton from "@/components/auth/GoogleButton"
+import Logo from "@/components/Logo"
 
 export const metadata = { title: "Entrar" }
 
@@ -19,7 +20,7 @@ export default async function LoginPage({ searchParams }) {
     <main className="flex min-h-screen items-center justify-center bg-base-200 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-base-200 bg-base-100 p-8 shadow-sm">
         <Link href="/" className="flex items-center gap-2 text-lg font-bold">
-          <span className="inline-block size-7 rounded-lg bg-primary" aria-hidden />
+          <Logo className="size-7" />
           {config.brand.logoText}
         </Link>
 
@@ -29,7 +30,10 @@ export default async function LoginPage({ searchParams }) {
         </p>
 
         {hasError && (
-          <div className="mt-4 rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error">
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error"
+          >
             No pudimos iniciar sesión. Intenta de nuevo.
           </div>
         )}

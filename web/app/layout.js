@@ -1,5 +1,20 @@
 import "./globals.css"
+import { Space_Grotesk, DM_Sans } from "next/font/google"
 import config from "@/config"
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+})
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-dm-sans",
+  display: "swap",
+})
 
 export const metadata = {
   metadataBase: new URL(
@@ -28,8 +43,21 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang={config.app.locale} data-theme="light">
-      <body>{children}</body>
+    <html
+      lang={config.app.locale}
+      data-theme="vibefast"
+      suppressHydrationWarning
+      className={`${spaceGrotesk.variable} ${dmSans.variable}`}
+      style={{ "--color-primary": config.brand.primary }}
+    >
+      <body className="bg-base-100 text-base-content">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem('theme');if(t==='vibefast'||t==='vibefast-dark'){document.documentElement.setAttribute('data-theme',t)}}catch(e){}`,
+          }}
+        />
+        {children}
+      </body>
     </html>
   )
 }

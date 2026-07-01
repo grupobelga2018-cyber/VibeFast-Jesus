@@ -58,6 +58,7 @@ const config = {
     rag: false, // RAG con pgvector — opcional
     posthog: false, // Tracking — opcional
     resend: true, // Email — Sem 1+
+    pricing: true, // Muestra la sección de precios en la landing (vitrina; el cobro real es `payments`)
     payments: false, // Stripe — opcional, fuera del temario
     hardware: false, // ESP-Claw bridge — Sem 8
   },
@@ -101,6 +102,7 @@ const config = {
   landing: {
     nav: [
       { label: "Características", href: "#features" },
+      { label: "Precios", href: "#pricing" },
       { label: "Preguntas", href: "#faq" },
       { label: "Docs", href: "/docs" },
     ],
@@ -111,6 +113,29 @@ const config = {
         "VibeFast es la plantilla del curso: Next.js, Supabase, OpenAI y MCP cableados desde el día 1. Tú extiendes con prompts en Cursor.",
       cta: { label: "Únete al waitlist", href: "#waitlist" },
       ctaSecondary: { label: "Ver docs", href: "/docs" },
+    },
+    problem: {
+      eyebrow: "El problema",
+      title: "Construir el andamiaje mata tu momentum.",
+      subtitle:
+        "La mayoría de founders se atoran semanas configurando lo mismo antes de tocar su idea real.",
+      items: [
+        {
+          icon: "Timer",
+          title: "Semanas en boilerplate",
+          body: "Auth, base de datos, deploy, emails… configuras lo mismo que todos antes de validar nada.",
+        },
+        {
+          icon: "Puzzle",
+          title: "Parálisis por herramientas",
+          body: "Cada capa tiene 10 opciones. Comparas en vez de construir y pierdes el hilo.",
+        },
+        {
+          icon: "PlugZap",
+          title: "La IA no se integra sola",
+          body: "Structured outputs, tool use, agentes y MCP suenan bien hasta que hay que cablearlos.",
+        },
+      ],
     },
     features: {
       eyebrow: "Lo que ya viene listo",
@@ -171,6 +196,43 @@ const config = {
         },
       ],
     },
+    socialProof: {
+      text: "Founders del curso ya lanzaron con este stack",
+      logos: ["Remotto", "Startup Chihuahua", "Next.js", "Supabase", "OpenAI", "Vercel"],
+    },
+    testimonials: {
+      eyebrow: "Prueba social",
+      title: "Founders que ya lanzaron con VibeFast.",
+      subtitle: "Testimonios de cohortes anteriores del curso.",
+      items: [
+        {
+          quote:
+            "Pasé de una idea en Notion a un MVP con IA en producción en dos semanas. Nunca había tocado código.",
+          author: "Ana Márquez",
+          role: "Founder · Fisio en casa",
+        },
+        {
+          quote:
+            "El boilerplate ya traía auth, base de datos y el agente cableados. Solo describí lo que quería en Cursor.",
+          author: "Diego Sáenz",
+          role: "Founder · Tutor IA",
+        },
+        {
+          quote:
+            "Las docs semana a semana fueron mi mapa. Copiaba el prompt, ajustaba y avanzaba sin atorarme.",
+          author: "Lucía Fernández",
+          role: "Founder · Recetario inteligente",
+        },
+      ],
+    },
+    finalCta: {
+      eyebrow: "Tu turno",
+      title: "Deja de configurar. Empieza a construir.",
+      subtitle:
+        "Clona la plantilla, edita config.js y ten tu producto AI-native en producción esta semana.",
+      cta: { label: "Únete al waitlist", href: "#waitlist" },
+      ctaSecondary: { label: "Leer las docs", href: "/docs" },
+    },
     waitlist: {
       eyebrow: "Únete primero",
       title: "Sé de los primeros en saber.",
@@ -181,6 +243,32 @@ const config = {
     },
     footer: {
       tagline: "Construido para founders. Por Remotto × Startup Chihuahua.",
+      columns: [
+        {
+          title: "Producto",
+          links: [
+            { label: "Características", href: "#features" },
+            { label: "Precios", href: "#pricing" },
+            { label: "Preguntas", href: "#faq" },
+          ],
+        },
+        {
+          title: "Recursos",
+          links: [
+            { label: "Docs", href: "/docs" },
+            { label: "Quick start", href: "/docs/setup/quick-start" },
+            { label: "Troubleshooting", href: "/docs/troubleshooting/errores-comunes" },
+          ],
+        },
+        {
+          title: "Comunidad",
+          links: [
+            { label: "GitHub", href: "https://github.com/remotto/vibefast", external: true },
+            { label: "Remotto", href: "https://remotto.com", external: true },
+          ],
+        },
+      ],
+      // Compat: links planos usados en el bar inferior
       links: [
         { label: "Docs", href: "/docs" },
         { label: "GitHub", href: "https://github.com/remotto/vibefast", external: true },
@@ -189,9 +277,14 @@ const config = {
   },
 
   // -----------------------------------------------------------
-  // Pricing (sólo se renderiza si features.payments === true)
+  // Pricing — vitrina de planes.
+  // Se muestra en la landing si features.pricing === true.
+  // El cobro real (Stripe) depende de features.payments.
   // -----------------------------------------------------------
   pricing: {
+    eyebrow: "Precios",
+    title: "Simple y sin sorpresas.",
+    subtitle: "Empieza gratis. Sube de plan cuando tu producto crezca.",
     plans: [
       {
         id: "starter",

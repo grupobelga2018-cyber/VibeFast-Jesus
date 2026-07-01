@@ -1,0 +1,56 @@
+---
+title: Leer errores sin pánico
+description: Un error rojo no es el fin del mundo. Es una pista.
+order: 0
+---
+
+Vas a ver errores. **Mucho.** Y está bien: hasta los programadores con 20 años de experiencia los ven todo el día. Un error no significa que hiciste algo mal ni que “no sirves para esto”. Es la compu diciéndote **dónde** mirar.
+
+<Callout type="info" title="El secreto peor guardado">
+El 90% de las veces, la solución es: copiar el error, pegárselo a la IA y hacer lo que dice. En serio.
+</Callout>
+
+## Paso 1: no cierres nada, respira
+
+Cuando algo truena, no borres código en pánico. El error tiene la pista. Léelo (aunque suene a chino) — casi siempre menciona un **archivo** y una **línea**.
+
+## Paso 2: ¿dónde está el error?
+
+Los errores aparecen en 3 lugares. Aprende a mirarlos:
+
+| Dónde | Qué errores | Cómo verlo |
+|-------|-------------|------------|
+| **Terminal** de Cursor | Al instalar o arrancar (`yarn dev`) | El panel de abajo, texto en rojo. |
+| **Overlay del navegador** | Al cargar una página rota | Un recuadro rojo grande encima de la web. |
+| **Consola del navegador** | Cosas que fallan “en silencio” | Clic derecho → Inspeccionar → pestaña **Console**. |
+
+## Paso 3: copia el error COMPLETO
+
+No lo describas con tus palabras (“no jala la página”). **Copia el texto tal cual**, entero. La IA necesita el mensaje exacto, no un resumen.
+
+## Paso 4: pégaselo a Cursor
+
+<PromptBox label="Prompt para destrabar un error">
+Me sale este error. Explícame en simple qué significa y cómo lo arreglo, paso a paso:
+
+[pega el error completo aquí]
+</PromptBox>
+
+## Si sigues atorado: pide ayuda bien
+
+Cuando le escribas al docente o a un compañero, da estos 4 datos (así te ayudan rápido):
+
+1. **Qué intentabas hacer** (“seguir el paso 5 de Semana 2”).
+2. **Qué esperabas** que pasara.
+3. **Qué pasó** en su lugar (el error completo).
+4. **Qué ya intentaste** para arreglarlo.
+
+<Callout type="warning" title="Nunca pegues tus claves">
+Al compartir un error, revisa que no incluya tu `SUPABASE_SERVICE_ROLE_KEY` u otras keys. Si aparece, bórrala antes de mandar.
+</Callout>
+
+<Callout type="success" title="Reencuadre">
+Cada error resuelto es una cosa que ya no te va a frenar. Coleccionarlos es, literalmente, aprender a construir.
+</Callout>
+
+¿Ya sabes cuál es? → [Errores comunes y su solución](/docs/troubleshooting/errores-comunes).

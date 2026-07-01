@@ -79,6 +79,15 @@ export default function Chat() {
           ))
         )}
 
+        {streaming &&
+          messages[messages.length - 1]?.role === "assistant" &&
+          messages[messages.length - 1]?.content === "" && (
+            <div className="flex items-center gap-2 px-1 text-sm text-base-content/50">
+              <span className="loading loading-dots loading-sm" />
+              Pensando…
+            </div>
+          )}
+
         {error && (
           <div role="alert" className="alert alert-error">
             <AlertCircle className="size-5" />

@@ -30,7 +30,7 @@ export default function Hero() {
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <Link href={cta.href} className="btn btn-primary btn-lg">
+          <Link href={cta.href} className="btn btn-accent btn-lg">
             {cta.label}
             <ArrowRight className="size-4" />
           </Link>

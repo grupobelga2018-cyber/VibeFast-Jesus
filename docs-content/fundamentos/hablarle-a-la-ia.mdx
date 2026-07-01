@@ -1,0 +1,77 @@
+---
+title: Cómo hablarle a la IA
+description: El corazón del vibecoding — describir, revisar, probar. Una y otra vez.
+order: 3
+---
+
+En este curso **no escribes código: lo describes**. Cursor (la IA) lo escribe por ti. Tu superpoder no es programar, es **pedir bien y revisar**. Esta página es la técnica.
+
+## El ciclo: describir → revisar → probar
+
+Todo lo que construyas sigue este loop:
+
+1. **Describe** lo que quieres, con contexto.
+2. **Revisa** lo que la IA propone (no aceptes a ciegas).
+3. **Prueba** en `localhost:3000`.
+4. ¿No quedó? Dile **qué está mal** y repite.
+
+<Callout type="info" title="Es normal iterar 3-4 veces">
+Nadie acierta al primer prompt. Cada vuelta acerca el resultado. Eso no es fallar: es el método.
+</Callout>
+
+## Un buen prompt tiene 3 cosas
+
+- **Qué** quieres (el objetivo).
+- **Dónde** (el archivo o la sección: “en la landing”, “en `config.js`”).
+- **Cómo** lo quieres (detalles, ejemplos, tono).
+
+<PromptBox label="❌ Prompt flojo">
+haz un botón
+</PromptBox>
+
+<PromptBox label="✅ Prompt bueno">
+En la sección Hero de la landing, cambia el botón principal para que diga "Empieza gratis" y lleve al formulario de waitlist. Mantén el estilo actual (botón naranja grande).
+</PromptBox>
+
+## Dale contexto: menciona archivos
+
+Cursor entiende mejor si le dices dónde mirar. Usa `@` para referenciar un archivo:
+
+<PromptBox label="Prompt con contexto">
+Mira @web/config.js. Quiero agregar una sección de testimonios a la landing. Sugiéreme la estructura de datos que iría en config y el componente que la muestra.
+</PromptBox>
+
+## Cuando algo falla, pega el error
+
+No describas el error con tus palabras: **cópialo tal cual** y pégaselo.
+
+<PromptBox label="Cuando hay un error">
+Me sale este error al correr la app. ¿Qué significa y cómo lo arreglo?
+
+[pega aquí el error completo de la terminal o del navegador]
+</PromptBox>
+
+## Revisa antes de aceptar
+
+Cuando Cursor propone cambios, te muestra un **diff** (verde = agregado, rojo = quitado). Antes de aceptar:
+
+- ¿Cambió solo lo que pediste, o tocó cosas de más?
+- Si no entiendes un cambio, pregunta: “explícame qué hace esta parte”.
+- Puedes **aceptar** o **rechazar**. Si dudas, rechaza y pide de nuevo.
+
+<Callout type="warning" title="Tú mandas, no la IA">
+La IA se equivoca y a veces inventa. Tú eres quien prueba y decide. Si algo se ve raro, no lo aceptes “por si acaso”.
+</Callout>
+
+## Trucos que funcionan
+
+- **Un cambio a la vez.** No pidas 5 cosas en un prompt; pide una, prueba, sigue.
+- **Guarda cuando algo funcione** (haz commit — ver [Git básico](/docs/fundamentos/git-basico)). Así puedes volver si lo siguiente lo rompe.
+- **Si se enreda, empieza limpio.** Abre un chat nuevo y describe de cero.
+
+<Checkpoint>
+✅ Entiendes el ciclo describir → revisar → probar.
+✅ Sabes que un buen prompt dice qué, dónde y cómo.
+✅ Sabes pegar el error completo en vez de describirlo.
+✅ Revisas el diff antes de aceptar.
+</Checkpoint>

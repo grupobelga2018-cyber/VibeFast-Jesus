@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import matter from "gray-matter"
+import GithubSlugger from "github-slugger"
 
 // docs-content vive en la raíz del monorepo, no dentro de /web
 const DOCS_DIR = path.join(process.cwd(), "..", "docs-content")
@@ -8,6 +9,7 @@ const DOCS_DIR = path.join(process.cwd(), "..", "docs-content")
 // Nombres bonitos para las secciones top-level
 const SECTION_LABELS = {
   intro: "Introducción",
+  fundamentos: "Fundamentos",
   setup: "Setup",
   tutoriales: "Tutoriales por semana",
   features: "Features",
@@ -84,6 +86,7 @@ function getSectionOrder(slug) {
   // Orden canónico de las secciones top-level
   const ORDER = [
     "intro",
+    "fundamentos",
     "setup",
     "tutoriales",
     "features",
@@ -148,5 +151,69 @@ export function getAllDocSlugs() {
     section.pages.map((page) => ({
       slug: [section.slug, page.slug],
     }))
+  )
+}
+
+/**
+ * Extrae los headings h2/h3 del MDX crudo para la tabla de contenidos.
+ * Usa GithubSlugger para generar los mismos ids que rehype-slug renderiza.
+ * Ignora las líneas dentro de bloques de código (```).
+ */
+export function getHeadings(content) {
+  const slugger = new GithubSlugger()
+  const headings = []
+  let inFence = false
+
+  for (const line of content.split("\n")) {
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence
+      continue
+    }
+    if (inFence) continue
+
+    const match = /^(#{2,3})\s+(.*)$/.exec(line)
+    if (!match) continue
+
+    const level = match[1].length
+    // Limpia markdown inline básico (**, *, `, [texto](url))
+    const text = match[2]
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+      .replace(/[*_`]/g, "")
+      .trim()
+    if (!text) continue
+
+    headings.push({ level, text, id: slugger.slug(text) })
+  }
+
+  return headings
+}
+
+/**
+ * Índice de búsqueda para el modal cmd-K: un registro por página.
+ */
+export function getSearchIndex() {
+  const tree = getDocsTree()
+  return tree.flatMap((section) =>
+    section.pages.map((page) => {
+      const doc = getDocBySlug([section.slug, page.slug])
+      const headings = doc ? getHeadings(doc.content).map((h) => h.text) : []
+      const body = doc
+        ? doc.content
+            .replace(/```[\s\S]*?```/g, " ")
+            .replace(/[#>*_`\-|]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 500)
+        : ""
+      return {
+        title: page.label,
+        section: section.slug,
+        sectionLabel: section.label,
+        href: page.href,
+        description: page.description || "",
+        headings,
+        body,
+      }
+    })
   )
 }

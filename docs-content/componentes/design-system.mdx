@@ -1,0 +1,64 @@
+---
+title: Design system
+description: Colores, tipografía, espaciado y reglas de UI/UX de VibeFast.
+order: 3
+---
+
+<StackBadge tech={["tailwind", "daisyui"]} />
+
+VibeFast trae un **design system** listo, con estilo **Flat Design** (limpio, accesible, rápido). Todo se apoya en tokens semánticos de daisyUI, así que cambiar una variable actualiza toda la app. Esta página es tu referencia; la fuente de verdad completa vive en `design-system/vibefast/MASTER.md`.
+
+## Color
+
+La paleta es **violeta (marca) + naranja (CTA) + slate (neutral)**.
+
+| Rol | Token daisyUI | Uso |
+|-----|---------------|-----|
+| Primary | `primary` | Marca: links, badges, acentos, botón principal |
+| Accent | `accent` | **CTAs de conversión** (waitlist, "empezar") |
+| Base 100 | `base-100` | Superficie de tarjetas y navbar |
+| Base 200 | `base-200` | Fondo de secciones |
+| Base 300 | `base-300` | Bordes y divisores |
+| Base content | `base-content` | Texto |
+
+Se usan como clases: `text-primary`, `bg-accent`, `border-base-300`, `text-base-content/70`, etc.
+
+<Callout type="info" title="El color de marca es config-driven">
+El primary sale de `config.brand.primary` en `web/config.js`. Cámbialo (un hex) y **toda la app** cambia de color: se inyecta como `--color-primary` desde `web/app/layout.js`.
+</Callout>
+
+## Tipografía
+
+- **Títulos:** Space Grotesk (geométrica, tech) — se aplica sola a `h1`–`h4`.
+- **Cuerpo:** DM Sans — es la fuente del `body`.
+
+Ambas se cargan con `next/font/google` en `web/app/layout.js` (sin FOUT, con `display: swap`). Para un título fuera de un heading, usa la clase `font-heading`.
+
+## Espaciado
+
+Ritmo de **4/8 px**. Con Tailwind: `p-2` (8px), `p-4` (16px), `gap-6` (24px), `py-20` (80px) para secciones. Mantén la escala; evita valores arbitrarios.
+
+## Estados de interacción
+
+- **Hover:** transición suave de color/opacidad (150–200ms). Nada de saltos ni animaciones decorativas.
+- **Foco:** anillo visible automático en todo elemento interactivo (accesibilidad de teclado). Nunca quites el foco sin reemplazo.
+- **Carga:** botones y acciones async muestran spinner (`loading loading-spinner`) o dots; nunca dejes la UI congelada.
+- **Movimiento:** se respeta `prefers-reduced-motion` (las animaciones se neutralizan si el usuario lo pide).
+
+## Reglas de oro (checklist)
+
+<Callout type="success" title="Antes de dar por terminada una pantalla">
+- Contraste de texto ≥ 4.5:1.
+- Iconos SVG (Lucide), nunca emojis como iconos.
+- Un solo CTA primario por sección.
+- Labels visibles (o `aria-label`) en inputs; errores con `role="alert"`.
+- Responsive probado en 375 / 768 / 1024 / 1440.
+</Callout>
+
+<Callout type="warning" title="Anti-patrones a evitar">
+Animación excesiva, dark mode por defecto, texto gris sobre gris, hex crudos en componentes (usa los tokens), y quitar el `outline` de foco sin reemplazo.
+</Callout>
+
+## ¿Y el dark mode?
+
+El tema `vibefast` (claro) es el default. Hay un `vibefast-dark` listo en `web/app/globals.css`: si activas `data-theme="vibefast-dark"` en el `<html>`, toda la app cambia con contraste correcto, porque todo usa tokens semánticos.

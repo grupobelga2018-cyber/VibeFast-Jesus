@@ -10,7 +10,7 @@ export default function DocsIndexPage() {
   const tree = getDocsTree()
 
   return (
-    <>
+    <article className="prose-vf min-w-0">
       <h1>Documentación</h1>
       <p>
         Bienvenido. Esta documentación cubre todo lo que necesitas para construir tu producto con
@@ -48,6 +48,6 @@ export default function DocsIndexPage() {
           </div>
         ))}
       </div>
-    </>
+    </article>
   )
 }

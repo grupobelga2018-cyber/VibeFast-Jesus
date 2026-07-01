@@ -1,0 +1,54 @@
+---
+title: Git en 5 minutos
+description: Guardar tu trabajo y publicarlo, sin línea de comandos.
+order: 4
+---
+
+<StackBadge tech={["git", "github", "cursor", "vercel"]} />
+
+**Git** es el sistema que guarda el historial de tu código. Piensa en él como los “puntos de guardado” de tu proyecto. Lo bueno: en Cursor lo haces con clics, **sin escribir comandos**.
+
+## Los 2 conceptos que importan
+
+- **Commit** = un punto de guardado. Juntas unos cambios y los guardas con un mensajito (“agregué la sección de precios”).
+- **Push** = subir esos puntos de guardado a **GitHub** (la nube). Esto también es lo que **publica** tu sitio, porque Vercel republica cada vez que haces push.
+
+<Callout type="info" title="Por qué te importa aunque no seas técnico">
+1) Nunca pierdes trabajo: si algo se rompe, vuelves a un commit anterior. 2) Publicar es literalmente hacer push. Sin esto, tus cambios se quedan solo en tu compu.
+</Callout>
+
+## Guardar cambios (commit) desde Cursor
+
+1. En la barra lateral izquierda de Cursor, haz clic en el ícono de **Source Control** (parece una ramita con puntos).
+2. Verás la lista de archivos que cambiaste.
+3. Escribe un mensaje corto en la caja de arriba (ej. `landing: nueva sección de precios`).
+4. Haz clic en **Commit**. (Si pregunta “stage all changes?”, di que sí.)
+
+<Callout type="warning" title="Buen mensaje de commit">
+Que diga **qué** hiciste, no “cambios” o “asdf”. Tu yo del futuro te lo agradecerá.
+</Callout>
+
+## Publicar (push)
+
+Después del commit, haz clic en **Sync Changes** (o **Push**). Eso sube todo a GitHub.
+
+Si tu proyecto está conectado a Vercel, en 1-2 minutos tu sitio público se actualiza solo. 🎉
+
+## El flujo completo (tu rutina)
+
+1. Le pides algo a Cursor y **pruebas** en `localhost:3000`.
+2. Cuando **funciona**, haces **commit** (punto de guardado).
+3. Cuando quieres que el mundo lo vea, haces **push**.
+
+<Callout type="danger" title="Antes de tu primer commit">
+Asegúrate de que `web/.env.local` **no** esté en la lista de archivos a subir. Trae tus claves secretas. Ya está protegido por `.gitignore`, pero verifica: nunca debe aparecer en Source Control.
+</Callout>
+
+<Checkpoint>
+✅ Sabes que commit = guardar y push = publicar.
+✅ Hiciste un commit con un mensaje claro desde Cursor.
+✅ Hiciste push y viste tu cambio en la web pública.
+✅ Confirmaste que `.env.local` no se sube.
+</Checkpoint>
+
+¿Algo tronó? → [Leer errores sin pánico](/docs/troubleshooting/leer-errores).

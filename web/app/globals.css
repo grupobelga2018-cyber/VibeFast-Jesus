@@ -1,12 +1,62 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes: ["light --default", "dark --prefersdark"];
+@plugin "daisyui";
+
+/* ============================================================
+   Tema de marca VibeFast (Flat Design)
+   Paleta: violeta (primary) + naranja (accent/CTA) + slate (neutral).
+   El primary real lo inyecta config.brand.primary desde layout.js
+   como --color-primary inline (config = fuente de verdad).
+   ============================================================ */
+@plugin "daisyui/theme" {
+  name: "vibefast";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-primary: #7c3aed;
+  --color-primary-content: #ffffff;
+  --color-secondary: #6d28d9;
+  --color-secondary-content: #ffffff;
+  --color-accent: #f97316;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1e293b;
+  --color-neutral-content: #f8fafc;
+  --color-base-100: #ffffff;
+  --color-base-200: #f8fafc;
+  --color-base-300: #e2e8f0;
+  --color-base-content: #1e293b;
+  --color-info: #0ea5e9;
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-error: #dc2626;
+  --radius-box: 1rem;
+  --radius-field: 0.5rem;
+  --radius-selector: 0.5rem;
 }
 
-/* Tokens del producto — los colores del config.js se inyectan vía variables CSS */
-:root {
-  --vf-primary: theme(--color-violet-600);
-  --vf-radius: 0.75rem;
+@plugin "daisyui/theme" {
+  name: "vibefast-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+  --color-primary: #a78bfa;
+  --color-primary-content: #ffffff;
+  --color-secondary: #8b5cf6;
+  --color-secondary-content: #1e1b2e;
+  --color-accent: #fb923c;
+  --color-accent-content: #1e1b2e;
+  --color-neutral: #e2e8f0;
+  --color-neutral-content: #0f172a;
+  --color-base-100: #0f172a;
+  --color-base-200: #1e293b;
+  --color-base-300: #334155;
+  --color-base-content: #e2e8f0;
+  --color-info: #38bdf8;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --radius-box: 1rem;
+  --radius-field: 0.5rem;
+  --radius-selector: 0.5rem;
 }
 
 html,
@@ -15,40 +65,104 @@ body {
 }
 
 body {
-  font-family: var(--font-geist-sans, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--font-dm-sans, ui-sans-serif, system-ui, sans-serif);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Prose tweaks para /docs */
-.prose-vf {
-  @apply max-w-none;
+/* Tipografía de display: headings con Space Grotesk */
+h1,
+h2,
+h3,
+h4,
+.font-heading {
+  font-family: var(--font-space-grotesk, var(--font-dm-sans, ui-sans-serif, system-ui, sans-serif));
 }
+
+/* ============================================================
+   Primitivas UX globales (skill ui-ux-pro-max)
+   ============================================================ */
+
+/* Foco visible accesible en cualquier elemento interactivo (skill §1, High).
+   Anillo con offset que funciona sobre cualquier fondo del tema. */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-base-100),
+    0 0 0 4px var(--color-primary);
+  border-radius: var(--radius-field, 0.5rem);
+}
+
+/* Respeta prefers-reduced-motion: neutraliza animaciones/transiciones (skill §7). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Modal de búsqueda: fondo opaco del tema (por encima del overlay oscuro). */
+.docs-search-panel {
+  background-color: var(--color-base-100);
+}
+
+/* Prose tweaks para /docs — ritmo vertical amplio para no abrumar */
 .prose-vf h1 {
   @apply text-4xl font-bold tracking-tight mt-2 mb-6;
 }
 .prose-vf h2 {
-  @apply text-2xl font-semibold tracking-tight mt-10 mb-4 pb-2 border-b border-base-300;
+  @apply text-2xl font-semibold tracking-tight mt-16 mb-5;
 }
 .prose-vf h3 {
-  @apply text-xl font-semibold mt-8 mb-3;
+  @apply text-xl font-semibold mt-12 mb-3;
 }
 .prose-vf p {
-  @apply leading-7 my-4 text-base-content/85;
+  @apply leading-8 my-6 text-base-content/80;
 }
 .prose-vf ul {
-  @apply list-disc pl-6 my-4 space-y-1;
+  @apply list-disc pl-6 my-6 space-y-2.5;
 }
 .prose-vf ol {
-  @apply list-decimal pl-6 my-4 space-y-1;
+  @apply list-decimal pl-6 my-6 space-y-2.5;
+}
+.prose-vf li {
+  @apply leading-8;
+}
+/* Primer bloque tras el encabezado: sin margen superior extra */
+.prose-vf > :first-child {
+  @apply mt-0;
 }
 .prose-vf a {
   @apply text-primary underline underline-offset-2 hover:text-primary/80;
 }
 .prose-vf code:not(pre code) {
-  @apply rounded bg-base-200 px-1.5 py-0.5 text-sm font-mono;
+  @apply rounded bg-primary/10 px-1.5 py-0.5 text-sm font-mono text-primary;
 }
 .prose-vf pre {
-  @apply rounded-lg bg-neutral text-neutral-content p-4 overflow-x-auto my-6 text-sm font-mono;
+  @apply rounded-lg p-4 overflow-x-auto my-6 text-sm font-mono;
+}
+/* rehype-pretty-code + shiki: color por variables, con soporte light/dark.
+   keepBackground:false → el fondo lo ponemos aquí para respetar el tema DaisyUI. */
+.prose-vf pre {
+  @apply bg-base-300/60;
+}
+.prose-vf pre code {
+  @apply grid; /* cada línea en su fila, permite resaltar líneas */
+}
+.prose-vf pre code span[data-line] {
+  @apply px-1;
+}
+.prose-vf code[data-theme] span {
+  color: var(--shiki-light);
+}
+[data-theme="vibefast-dark"] .prose-vf code[data-theme] span {
+  color: var(--shiki-dark);
+}
+[data-theme="vibefast-dark"] .prose-vf pre {
+  @apply bg-base-300;
 }
 .prose-vf table {
   @apply w-full text-sm my-6 border-collapse;

@@ -41,7 +41,10 @@ export default function Waitlist() {
         <p className="mt-4 text-base-content/70">{subtitle}</p>
 
         {status === "success" ? (
-          <div className="mx-auto mt-10 max-w-md rounded-xl border border-success/40 bg-success/10 px-4 py-6 text-success">
+          <div
+            role="status"
+            className="mx-auto mt-10 max-w-md rounded-xl border border-success/40 bg-success/10 px-4 py-6 text-success"
+          >
             {successMessage}
           </div>
         ) : (
@@ -49,9 +52,15 @@ export default function Waitlist() {
             onSubmit={onSubmit}
             className="mx-auto mt-10 flex max-w-md flex-col gap-2 sm:flex-row"
           >
+            <label htmlFor="waitlist-email" className="sr-only">
+              Correo electrónico
+            </label>
             <input
+              id="waitlist-email"
+              name="email"
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={placeholder}
@@ -60,16 +69,19 @@ export default function Waitlist() {
             />
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-accent"
               disabled={status === "loading"}
             >
+              {status === "loading" && <span className="loading loading-spinner loading-sm" />}
               {status === "loading" ? "Enviando…" : buttonLabel}
             </button>
           </form>
         )}
 
         {status === "error" && (
-          <p className="mt-3 text-sm text-error">{error}</p>
+          <p role="alert" className="mt-3 text-sm text-error">
+            {error}
+          </p>
         )}
       </div>
     </section>

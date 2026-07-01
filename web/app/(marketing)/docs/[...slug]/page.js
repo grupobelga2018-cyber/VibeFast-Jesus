@@ -1,8 +1,28 @@
 import { notFound } from "next/navigation"
 import { MDXRemote } from "next-mdx-remote/rsc"
+import rehypeSlug from "rehype-slug"
+import rehypePrettyCode from "rehype-pretty-code"
+import remarkGfm from "remark-gfm"
 import { mdxComponents } from "@/components/docs/mdxComponents"
 import PrevNext from "@/components/docs/PrevNext"
-import { getDocBySlug, getAllDocSlugs } from "@/lib/docs"
+import TableOfContents from "@/components/docs/TableOfContents"
+import { getDocBySlug, getAllDocSlugs, getHeadings } from "@/lib/docs"
+
+const mdxOptions = {
+  mdxOptions: {
+    remarkPlugins: [remarkGfm],
+    rehypePlugins: [
+      rehypeSlug,
+      [
+        rehypePrettyCode,
+        {
+          theme: { light: "github-light", dark: "github-dark" },
+          keepBackground: false,
+        },
+      ],
+    ],
+  },
+}
 
 export async function generateStaticParams() {
   return getAllDocSlugs()
@@ -29,13 +49,33 @@ export default async function DocPage({ params }) {
   const doc = getDocBySlug(slug)
   if (!doc) notFound()
 
+  const headings = getHeadings(doc.content)
+
   return (
-    <>
-      <p className="text-xs font-medium uppercase tracking-wider text-primary/80 not-prose">
-        {doc.section.label}
-      </p>
-      <MDXRemote source={doc.content} components={mdxComponents} />
-      <PrevNext prev={doc.prev} next={doc.next} />
-    </>
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_200px]">
+      <article className="prose-vf min-w-0 max-w-2xl">
+        <header className="not-prose mb-12">
+          <p className="text-sm font-medium uppercase tracking-wider text-primary">
+            {doc.section.label}
+          </p>
+          <h1 className="mt-3 font-heading text-4xl font-bold tracking-tight text-base-content">
+            {doc.data.title}
+          </h1>
+          {doc.data.description && (
+            <p className="mt-4 text-lg leading-relaxed text-base-content/60">
+              {doc.data.description}
+            </p>
+          )}
+        </header>
+        <MDXRemote source={doc.content} components={mdxComponents} options={mdxOptions} />
+        <PrevNext prev={doc.prev} next={doc.next} />
+      </article>
+
+      <aside className="hidden lg:block">
+        <div className="sticky top-20">
+          <TableOfContents headings={headings} />
+        </div>
+      </aside>
+    </div>
   )
 }

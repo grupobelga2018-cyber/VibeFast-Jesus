@@ -170,6 +170,13 @@ export default function AgentRun() {
           })
         )}
 
+        {running && timeline[timeline.length - 1]?.kind === "user" && (
+          <div className="flex items-center gap-2 px-1 text-sm text-base-content/50">
+            <span className="loading loading-dots loading-sm" />
+            El agente está trabajando…
+          </div>
+        )}
+
         {error && (
           <div role="alert" className="alert alert-error">
             <AlertCircle className="size-5" />

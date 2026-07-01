@@ -1,0 +1,68 @@
+---
+title: La terminal sin miedo
+description: Esa ventana negra de comandos no muerde. Aquí lo esencial.
+order: 2
+---
+
+La **terminal** es una ventana donde le das órdenes a la compu escribiendo texto, en vez de hacer clic. Suena intimidante, pero para este curso solo usarás un puñado de comandos, casi siempre **copiar y pegar**.
+
+<Callout type="info" title="No vas a escribir comandos raros de memoria">
+En los tutoriales, los comandos vienen listos para copiar. Tu trabajo es pegarlos y apretar Enter.
+</Callout>
+
+## Abrir la terminal en Cursor
+
+1. Abre Cursor con tu proyecto.
+2. En el menú de arriba: **Terminal → New Terminal** (o el atajo `` Ctrl+` ``, esa tecla arriba del Tab).
+3. Aparece un panel abajo con texto y un cursor parpadeando. Eso es la terminal.
+
+## Correr tu primer comando
+
+Escribe (o pega) esto y aprieta **Enter**:
+
+```bash
+node --version
+```
+
+Si te responde algo como `v22.x`, ¡funciona! Acabas de correr un comando.
+
+<Callout type="warning" title="Copiar/pegar en la terminal">
+En Mac es `Cmd+C` / `Cmd+V`. En Windows, a veces es clic derecho para pegar. Si `Ctrl+V` no pega, prueba `Ctrl+Shift+V`.
+</Callout>
+
+## ¿Se colgó o está trabajando?
+
+La duda #1 de todos. Cuando corres algo como `yarn install` o `yarn dev`:
+
+- **Está trabajando** si ves texto moviéndose, puntos, o una barra de progreso. **Espera.**
+- **Terminó** cuando vuelve a aparecer el cursor listo para escribir.
+- **`yarn dev` NO “termina”**: se queda corriendo a propósito (es tu servidor). Eso es normal — déjalo abierto.
+
+## El botón de pánico: `Ctrl+C`
+
+Si un comando se quedó pegado o quieres pararlo, haz clic en la terminal y aprieta **`Ctrl+C`**. Eso lo detiene. No rompe nada.
+
+## Dos comandos que te ubican
+
+```bash
+pwd
+```
+Te dice **en qué carpeta estás parado** (path = ruta).
+
+```bash
+ls
+```
+**Lista** los archivos y carpetas de donde estás.
+
+<Callout type="danger" title="Antes de correr un comando de internet">
+Si copias un comando de un tutorial nuestro, tranquilo. Si lo copias de un sitio random, pídele a Cursor: “¿qué hace este comando? ¿es seguro?” antes de correrlo.
+</Callout>
+
+<Checkpoint>
+✅ Abriste la terminal en Cursor.
+✅ Corriste `node --version` y te respondió.
+✅ Sabes que `yarn dev` se queda corriendo a propósito.
+✅ Sabes que `Ctrl+C` detiene lo que sea.
+</Checkpoint>
+
+Siguiente: [Cómo hablarle a la IA](/docs/fundamentos/hablarle-a-la-ia).

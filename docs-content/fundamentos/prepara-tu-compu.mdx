@@ -1,0 +1,79 @@
+---
+title: Prepara tu compu (Mac / Windows)
+description: Lo que necesitas instalar según tu equipo, antes de tocar el repo.
+order: 0
+---
+
+<StackBadge tech={["node", "yarn", "git", "cursor"]} />
+
+Antes de clonar VibeFast necesitas 4 programas en tu compu. Los pasos cambian entre **Mac** y **Windows** — ve directo a tu sección. Al final los dos caminos se juntan.
+
+<Callout type="info" title="Los 4 programas (en ambos)">
+1. **Node** (motor que corre el proyecto) · 2. **yarn** (baja las dependencias) · 3. **Git** (guarda y publica) · 4. **Cursor** (el editor con IA). El navegador **Chrome** también ayuda.
+</Callout>
+
+## 🍎 En Mac
+
+### 1. La terminal (ya la tienes)
+Búscala con `Cmd + Espacio`, escribe **Terminal** y Enter. Es la app negra de comandos.
+
+### 2. Node (versión LTS)
+La forma más simple: descarga el instalador **LTS** desde [nodejs.org](https://nodejs.org), ábrelo (`.pkg`) y dale siguiente hasta terminar. Sirve igual para Mac con chip Apple (M1/M2/M3) o Intel; el instalador lo detecta solo.
+
+### 3. yarn
+En la terminal:
+```bash
+npm install -g yarn
+```
+
+### 4. Git
+Mac lo trae casi listo. Corre `git --version`: si te falta, aparece un botón para instalar las *Command Line Tools*. Acéptalo. (O corre `xcode-select --install`.)
+
+### 5. Cursor
+Descarga desde [cursor.com](https://cursor.com), abre el `.dmg` y arrastra Cursor a **Aplicaciones**.
+
+## 🪟 En Windows
+
+### 1. La terminal
+Abre el menú Inicio, escribe **Terminal** (o **PowerShell**) y ábrelo. Es la ventana de comandos.
+
+### 2. Node (versión LTS)
+Descarga el instalador **LTS** desde [nodejs.org](https://nodejs.org) (archivo `.msi`), ábrelo y dale siguiente. **Deja marcada** la casilla que dice *"Add to PATH"* (viene marcada por defecto).
+
+<Callout type="warning" title="Reinicia la terminal">
+En Windows, después de instalar algo, **cierra y vuelve a abrir** la terminal para que reconozca el comando nuevo.
+</Callout>
+
+### 3. yarn
+En PowerShell:
+```powershell
+npm install -g yarn
+```
+
+### 4. Git
+Descarga desde [git-scm.com](https://git-scm.com/download/win), abre el instalador y acepta **todas las opciones por defecto** (dale siguiente hasta el final). Esto también instala *Git Bash*, otra terminal útil.
+
+### 5. Cursor
+Descarga el `.exe` desde [cursor.com](https://cursor.com) y ejecútalo. Sigue el instalador.
+
+## ✅ Verifica (Mac y Windows)
+
+Cierra y abre la terminal, y corre estos tres. Deberías ver un número de versión en cada uno:
+
+```bash
+node --version
+yarn --version
+git --version
+```
+
+<Callout type="danger" title="Si un comando dice 'command not found' / 'no se reconoce'">
+Significa que ese programa no quedó instalado o la terminal no lo ve. En **Windows**, casi siempre se arregla cerrando y reabriendo la terminal. Si sigue, reinstala ese programa (en Windows, verifica *"Add to PATH"*). O pega el error en Cursor y pide ayuda — ver [Leer errores sin pánico](/docs/troubleshooting/leer-errores).
+</Callout>
+
+<Checkpoint>
+✅ Tienes Node, yarn, Git y Cursor instalados.
+✅ Los tres `--version` responden con un número.
+✅ Sabes abrir tu terminal (Terminal en Mac, Terminal/PowerShell en Windows).
+</Checkpoint>
+
+Ya con tu compu lista, sigue con la [checklist de instalación](/docs/setup/instalacion) del proyecto.

@@ -32,12 +32,14 @@ export default async function DashboardPage() {
             required
             maxLength={120}
             placeholder="Título del item"
+            aria-label="Título del item"
             className="input input-bordered flex-1"
           />
           <input
             name="description"
             maxLength={280}
             placeholder="Descripción (opcional)"
+            aria-label="Descripción del item"
             className="input input-bordered flex-1"
           />
           <button type="submit" className="btn btn-primary">
@@ -96,6 +98,7 @@ export default async function DashboardPage() {
                   type="submit"
                   className="btn btn-ghost btn-sm btn-square"
                   title={item.status === "done" ? "Reabrir" : "Marcar como hecho"}
+                  aria-label={item.status === "done" ? "Reabrir item" : "Marcar como hecho"}
                 >
                   {item.status === "done" ? (
                     <RotateCcw className="size-4" />
@@ -111,6 +114,7 @@ export default async function DashboardPage() {
                   type="submit"
                   className="btn btn-ghost btn-sm btn-square text-error"
                   title="Borrar"
+                  aria-label={`Borrar ${item.title}`}
                 >
                   <Trash2 className="size-4" />
                 </button>

@@ -4,6 +4,21 @@ Boilerplate para el **Curso de Vibecoding Remotto × Startup Chihuahua** (11 sem
 
 Construido para founders mayormente no técnicos con 4 horas semanales: arrancas con una plantilla lista y la extiendes semana a semana hasta llegar a Demo Day con un producto AI-native funcional.
 
+## Qué instalar (una vez que tienes el repo)
+
+Antes de correr nada, ten esto listo. Checklist completa con los enlaces de cada cuenta: `/docs/setup/instalacion`.
+
+**En tu computadora:**
+
+- **Node 20 o 22 LTS** ([nodejs.org](https://nodejs.org)) — usa una versión par. El repo trae `.nvmrc`: con nvm corre `nvm use`.
+- **yarn 1.x** — `npm install -g yarn`
+- **Git** y **[Cursor](https://cursor.com)** (el editor con IA).
+
+**Cuentas (todas con tier gratuito):**
+
+- [GitHub](https://github.com), [Supabase](https://supabase.com) y [Vercel](https://vercel.com) — créalas hoy.
+- [OpenAI](https://platform.openai.com) (Sem 3+) y [Resend](https://resend.com) (Sem 1+) — opcionales al inicio.
+
 ## Quick start (30 min, día de Sem 1)
 
 ```bash
@@ -24,7 +39,7 @@ yarn dev
 Abre `http://localhost:3000` — verás tu landing.
 Abre `http://localhost:3000/docs` — verás la documentación completa, mapeada semana a semana.
 
-> Si es tu primera vez, sigue la guía paso a paso en `/docs/setup/quick-start` (después de `yarn dev`).
+> Primera vez: sigue la checklist en `/docs/setup/instalacion` y luego el paso a paso en `/docs/setup/quick-start` (después de `yarn dev`).
 
 ## Estructura del repo
 
