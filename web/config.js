@@ -22,10 +22,10 @@ const config = {
   // Identidad del producto
   // -----------------------------------------------------------
   app: {
-    name: "VibeFast",
+    name: "Color Hair by Gabby",
     description:
-      "Boilerplate AI-native para founders. Construido para el Curso de Vibecoding Remotto.",
-    domain: "vibefast.dev", // sin https://, sin www
+      "Color, corte, peinados, faciales y maquillaje con Gaby Carmona: conoce el salón, los servicios y reserva con confianza antes de tu primera visita.",
+    domain: "colorhairbygabby.com", // sin https://, sin www
     locale: "es", // "es" | "en"
     // URL pública: usa NEXT_PUBLIC_APP_URL en .env. En este config solo definimos el default.
     defaultUrl: "http://localhost:3000",
@@ -36,7 +36,7 @@ const config = {
   // -----------------------------------------------------------
   brand: {
     // Color primario en HEX. DaisyUI lo aplica como --color-primary via theme.
-    primary: "#7c3aed", // violet-600
+    primary: "#B76E79", // dusty rose — elegante, cálido, acorde a belleza
     // Logo: puede ser texto o ruta a /public/logo.svg
     logoText: "VibeFast",
     logoSrc: null,
@@ -107,18 +107,18 @@ const config = {
       { label: "Docs", href: "/docs" },
     ],
     hero: {
-      eyebrow: "Curso Vibecoding · Remotto × Startup Chihuahua",
-      title: "De 0 a producto AI-native en 11 semanas.",
+      eyebrow: "Salón de belleza · Primera visita clara",
+      title: "Llega a tu primera cita sin dudas.",
       subtitle:
-        "VibeFast es la plantilla del curso: Next.js, Supabase, OpenAI y MCP cableados desde el día 1. Tú extiendes con prompts en Cursor.",
-      cta: { label: "Únete al waitlist", href: "#waitlist" },
+        "Conoce el ambiente, los servicios y lo que esperar antes de escribirnos.",
+      cta: { label: "Reservar cita", href: "#waitlist" },
       ctaSecondary: { label: "Ver docs", href: "/docs" },
     },
     problem: {
       eyebrow: "El problema",
-      title: "Construir el andamiaje mata tu momentum.",
+      title: "Las dudas antes del primer contacto con el salón.",
       subtitle:
-        "La mayoría de founders se atoran semanas configurando lo mismo antes de tocar su idea real.",
+        "La mayoría de las clientas no tienen información de los servicios y los costos del salón antes de llegar.",
       items: [
         {
           icon: "Timer",
@@ -143,67 +143,52 @@ const config = {
       subtitle: "No pierdes tiempo eligiendo herramientas. Te enfocas en tu producto.",
       items: [
         {
-          icon: "Sparkles",
-          title: "AI nativa",
-          body: "OpenAI con structured outputs, tool use, agentes con LangGraph y MCP. Listo para activar.",
+          icon: "Images",
+          title: "Resultados reales",
+          body: "Mira trabajos de clientas reales para saber qué esperar en tu primera visita.",
         },
         {
-          icon: "Database",
-          title: "Supabase + Auth",
-          body: "Base de datos con RLS, Google Auth y tablas pre-modeladas. No diseñas schema desde cero.",
+          icon: "Scissors",
+          title: "Servicios transparentes",
+          body: "Cada tratamiento con duración y descripción clara, sin sorpresas al llegar.",
         },
         {
-          icon: "Zap",
-          title: "Deploy en minutos",
-          body: "Vercel + Supabase Cloud. Una URL pública el primer día.",
-        },
-        {
-          icon: "BookOpen",
-          title: "Docs semana a semana",
-          body: "Tutoriales mapeados al temario del curso, con prompts de Cursor listos para copiar.",
-        },
-        {
-          icon: "Mail",
-          title: "Email + analytics",
-          body: "Resend para correos transaccionales y PostHog opcional para tracking.",
-        },
-        {
-          icon: "Cpu",
-          title: "Hardware-ready",
-          body: "Conexión MCP al ESP-Claw para el caso de hardware con IA del Módulo 3.",
+          icon: "CalendarCheck",
+          title: "Agenda en un clic",
+          body: "Elige horario, deja tus datos y recibe confirmación sin vueltas ni incertidumbre.",
         },
       ],
     },
     faq: {
       eyebrow: "Preguntas frecuentes",
-      title: "Lo que todo founder pregunta antes de arrancar.",
+      title: "Lo que toda clienta pregunta antes de hacer una cita.",
       items: [
         {
-          q: "¿Necesito saber programar?",
-          a: "No. El curso asume founders no técnicos. Construyes describiendo en Cursor; el boilerplate hace el resto.",
+          q: "¿Necesito cita previa?",
+          a: "Sí. Así te dedicamos el tiempo completo y evitas esperas. Puedes reservar desde esta página en pocos minutos.",
         },
         {
-          q: "¿Cuánto cuesta correr esto?",
-          a: "Vercel y Supabase tienen tiers gratuitos generosos. OpenAI cobra por uso: con gpt-4o-mini, el costo de un MVP del curso ronda US$5-20.",
+          q: "¿Cuánto dura la primera visita?",
+          a: "Depende del servicio. Un corte suele tomar 45–60 min; color o tratamientos, entre 90 y 150 min. Te lo confirmamos al agendar.",
         },
         {
-          q: "¿Puedo cambiar el stack?",
-          a: "Sí, pero el curso (y las docs) asumen este stack. Cambiar pieza por pieza es posible después del curso.",
+          q: "¿Qué pasa si es mi primera vez?",
+          a: "Empezamos con una consulta breve para entender lo que buscas. Sin presión: tú decides el servicio antes de empezar.",
         },
         {
-          q: "¿Y si me atoro?",
-          a: "Las docs incluyen una sección de troubleshooting con los 20 errores más comunes. Además hay sesión semanal con el docente.",
+          q: "¿Cómo llego y dónde me estaciono?",
+          a: "Al confirmar tu cita te enviamos la dirección exacta, referencias y opciones de estacionamiento cercanas.",
         },
       ],
     },
     socialProof: {
-      text: "Founders del curso ya lanzaron con este stack",
+      text: "Clientas que ya eligieron nuestros servicios",
       logos: ["Remotto", "Startup Chihuahua", "Next.js", "Supabase", "OpenAI", "Vercel"],
     },
     testimonials: {
       eyebrow: "Prueba social",
-      title: "Founders que ya lanzaron con VibeFast.",
-      subtitle: "Testimonios de cohortes anteriores del curso.",
+      title: "Clientas que han disfrutado de nuestros servicios.",
+      subtitle: "Testimonios de experiencias satisfactorias.",
       items: [
         {
           quote:

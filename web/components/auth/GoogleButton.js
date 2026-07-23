@@ -50,7 +50,7 @@ export default function GoogleButton({ next = "/dashboard" }) {
         />
       </svg>
       )}
-      {loading ? "Conectando…" : "Continuar con Google"}
+      {loading ? "Conectando…" : "Entrar con Google"}
     </button>
   )
 }

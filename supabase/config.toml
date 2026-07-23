@@ -15,13 +15,21 @@ major_version = 15
 
 [auth]
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/auth/callback",
+  "http://127.0.0.1:3000/**",
+]
 jwt_expiry = 3600
 enable_signup = true
 
-# Google OAuth. Las credenciales NO van aquí: se configuran en el
-# dashboard de Supabase Cloud (Authentication → Providers → Google).
-# En local, exporta GOOGLE_CLIENT_ID / GOOGLE_SECRET antes de `supabase start`.
+# Google OAuth (Supabase Cloud).
+# Credenciales: GOOGLE_CLIENT_ID / GOOGLE_SECRET (mismos valores que
+# GOOGLE_OAUTH_* en web/.env.local). Se empujan con:
+#   npx supabase config push
+# En Google Cloud Console, Authorized redirect URI debe ser:
+#   https://<project-ref>.supabase.co/auth/v1/callback
 [auth.external.google]
 enabled = true
 client_id = "env(GOOGLE_CLIENT_ID)"
