@@ -94,8 +94,21 @@ export default async function DashboardPage({ searchParams }) {
         oauthReady={googleOAuthConfigured()}
         connected={googleHealth.connected}
         stale={googleHealth.stale}
+        needsEnv={Boolean(googleHealth.needsEnv) || !googleOAuthConfigured()}
         email={googleHealth.email || ""}
-        googleStatus={params.google || (googleHealth.stale ? "expired" : "")}
+        googleStatus={
+          !googleOAuthConfigured()
+            ? "missing_oauth"
+            : googleHealth.connected
+              ? params.google === "connected"
+                ? "connected"
+                : ""
+              : params.google && params.google !== "connected"
+                ? params.google
+                : googleHealth.stale
+                  ? "expired"
+                  : params.google || ""
+        }
       />
 
       <form

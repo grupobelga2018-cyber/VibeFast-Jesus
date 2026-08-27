@@ -7,7 +7,7 @@ const STATUS = {
   },
   missing_oauth: {
     className: "text-warning",
-    text: "Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en Vercel (Production) o en .env.local.",
+    text: "El botón de conectar no basta: Vercel no tiene las claves de Google, así que el bot no puede crear eventos.",
   },
   denied: {
     className: "text-error",
@@ -35,14 +35,19 @@ const STATUS = {
   },
 }
 
+const VERCEL_ENV_URL =
+  "https://vercel.com/grupobelga2018-8056s-projects/vibe-fast-jesus-web/settings/environment-variables"
+
 export default function GoogleCalendarPanel({
   oauthReady,
   connected,
   stale,
+  needsEnv,
   email,
   googleStatus,
 }) {
   const status = STATUS[googleStatus]
+  const blockedByEnv = Boolean(needsEnv || !oauthReady)
 
   return (
     <section className="rounded-box border border-base-200 bg-base-100 p-4">
@@ -61,60 +66,44 @@ export default function GoogleCalendarPanel({
             <span className="badge badge-success">
               Conectado{email ? ` · ${email}` : ""}
             </span>
+          ) : blockedByEnv ? (
+            <span className="badge badge-warning">Faltan claves en Vercel</span>
           ) : stale ? (
             <span className="badge badge-warning">Permiso caducado</span>
           ) : null}
-          <a href="/api/google/calendar/connect" className="btn btn-sm btn-primary">
-            {connected ? "Volver a conectar" : "Conectar Google Calendar"}
-          </a>
+          {!blockedByEnv && (
+            <a href="/api/google/calendar/connect" className="btn btn-sm btn-primary">
+              {connected ? "Volver a conectar" : "Conectar Google Calendar"}
+            </a>
+          )}
         </div>
       </div>
       {status && <p className={`mt-3 text-sm ${status.className}`}>{status.text}</p>}
-      {!oauthReady && (
-        <p className="mt-3 text-sm text-warning">
-          Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en Vercel
-          (Production). Sin esas claves el bot no puede crear eventos, aunque
-          el botón de conectar sí funciona.
-        </p>
-      )}
-      {!connected && (
-        <ol className="mt-3 list-decimal space-y-1 pl-4 text-sm text-base-content/70">
+      {blockedByEnv && (
+        <ol className="mt-3 list-decimal space-y-2 pl-4 text-sm text-base-content/80">
           <li>
-            Habilita{" "}
-            <a
-              className="link"
-              href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Google Calendar API
-            </a>
-            .
-          </li>
-          <li>
-            En{" "}
-            <a
-              className="link"
-              href="https://console.cloud.google.com/auth/audience"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Audience
+            Abre{" "}
+            <a className="link" href={VERCEL_ENV_URL} target="_blank" rel="noreferrer">
+              Vercel → Environment Variables
             </a>{" "}
-            deja el estado en <b>Testing</b> y agrega el Gmail de Gaby en{" "}
-            <b>Test users</b>. Sin eso Google responde 403 access_denied.
-            En Testing el permiso dura 7 días: hay que reconectar o publicar la app.
+            (Production).
           </li>
           <li>
-            En Data Access agrega el scope{" "}
-            <code>https://www.googleapis.com/auth/calendar.events</code>.
+            Agrega estas dos, copiadas de <code>web/.env.local</code>:
+            <ul className="mt-1 list-disc pl-5 font-mono text-xs">
+              <li>GOOGLE_OAUTH_CLIENT_ID</li>
+              <li>GOOGLE_OAUTH_CLIENT_SECRET</li>
+            </ul>
           </li>
           <li>
-            En Google Cloud → Credentials agrega esta URI de redirección:{" "}
-            <code>https://vibe-fast-jesus-web.vercel.app/auth/callback</code>
-            .
+            Deployments → el último deploy → <b>Redeploy</b> (sin usar caché).
           </li>
-          <li>Pulsa Conectar y acepta el permiso con esa misma cuenta.</li>
+          <li>Vuelve a esta página: el botón Conectar Google Calendar aparece cuando las claves ya están.</li>
+        </ol>
+      )}
+      {!blockedByEnv && !connected && (
+        <ol className="mt-3 list-decimal space-y-1 pl-4 text-sm text-base-content/70">
+          <li>Pulsa Conectar y acepta el permiso con la cuenta de Gaby.</li>
         </ol>
       )}
     </section>

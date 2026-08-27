@@ -154,19 +154,20 @@ export async function isGoogleCalendarConnected() {
 export async function getGoogleCalendarHealth() {
   const auth = await loadGoogleCalendarAuth()
   if (!auth?.refresh_token) {
-    return { connected: false, stale: false, email: auth?.email || null }
+    return { connected: false, stale: false, needsEnv: false, email: auth?.email || null }
   }
   if (!googleOAuthConfigured()) {
     return {
       connected: false,
-      stale: true,
+      stale: false,
+      needsEnv: true,
       email: auth.email || null,
       error: "missing_oauth",
     }
   }
   const access = await getAccessToken()
   if (access.ok) {
-    return { connected: true, stale: false, email: auth.email || null }
+    return { connected: true, stale: false, needsEnv: false, email: auth.email || null }
   }
   const stale = /invalid_grant|invalid_rapt|unauthorized|expired|missing_oauth/i.test(
     String(access.error || "")
