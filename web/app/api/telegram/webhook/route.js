@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { verifyTelegramSecret } from "@/lib/telegram/client"
 import { handleTelegramUpdate } from "@/lib/telegram/handleUpdate"
+import { syncOpenAppointmentsToGoogle } from "@/lib/google/calendar"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -18,5 +19,10 @@ export async function POST(request) {
   }
 
   await handleTelegramUpdate(update)
+  after(() => {
+    syncOpenAppointmentsToGoogle().catch((err) => {
+      console.warn("[gcal] webhook backfill:", err.message)
+    })
+  })
   return NextResponse.json({ ok: true })
 }

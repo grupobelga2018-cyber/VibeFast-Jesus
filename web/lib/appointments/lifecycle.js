@@ -1,3 +1,4 @@
+import { after } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { endsAtFromStart, parseSalonDateTime } from "@/lib/appointments/helpers"
 import { resolveOpenAppointment } from "@/lib/appointments/find"
@@ -182,33 +183,36 @@ export async function requestTelegramBooking(payload) {
     console.error("[appointments] persist:", persistError.message)
   }
 
-  const gcal = await createGoogleCalendarEvent(appointment)
-  if (gcal.ok) {
-    appointment.google_event_id = gcal.eventId
-    await persistGoogleEventId(appointment.id, gcal.eventId)
-  } else if (!gcal.skipped) {
-    console.error("[gcal] telegram booking:", gcal.error)
+  const syncGoogle = async () => {
+    const gcal = await createGoogleCalendarEvent(appointment)
+    if (gcal.ok) {
+      appointment.google_event_id = gcal.eventId
+      await persistGoogleEventId(appointment.id, gcal.eventId)
+    } else {
+      console.error("[gcal] telegram booking:", gcal.error || "skip")
+    }
+    await notifyGabyAppointment(appointment, {
+      rescheduled: false,
+      googleError: gcal.ok ? null : gcal.error || "no se pudo crear el evento",
+    }).catch(() => {})
+    await sendAppointmentConfirmation(appointment, {
+      calendarSynced: Boolean(appointment.google_event_id),
+    }).catch(() => {})
+    return gcal
   }
 
-  await notifyGabyAppointment(appointment, {
-    rescheduled: false,
-    googleError: gcal.ok ? null : gcal.error || "no se pudo crear el evento",
-  }).catch(() => {})
-  await sendAppointmentConfirmation(appointment, {
-    calendarSynced: Boolean(appointment.google_event_id),
-  }).catch(() => {})
+  try {
+    after(syncGoogle)
+  } catch (err) {
+    console.warn("[gcal] after() no disponible:", err.message)
+    await syncGoogle()
+  }
 
   const calendlyNote = booked.ok
     ? " También quedó en el calendario de Calendly."
     : booked.skipped
       ? ""
       : ` Calendly no pudo bloquear el cupo (${booked.error || "error"}).`
-
-  const googleNote = gcal.ok
-    ? " También quedó en Google Calendar."
-    : gcal.skipped
-      ? ""
-      : ` Google Calendar: ${gcal.error || "no se pudo crear el evento"}.`
 
   const persistNote = persistError
     ? " Gaby ya recibió el aviso por Telegram."
@@ -219,7 +223,7 @@ export async function requestTelegramBooking(payload) {
     appointment,
     calendly: booked.ok,
     persisted: !persistError,
-    message: `Cita registrada.${calendlyNote}${googleNote}${persistNote}`,
+    message: `Cita registrada.${calendlyNote}${persistNote}`,
   }
 }
 

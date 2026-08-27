@@ -155,6 +155,28 @@ export async function loadGoogleCalendarAuth() {
   return null
 }
 
+export async function probeGoogleCalendar() {
+  const health = await getGoogleCalendarHealth()
+  const result = {
+    oauthConfigured: googleOAuthConfigured(),
+    connected: health.connected,
+    needsEnv: Boolean(health.needsEnv),
+    stale: Boolean(health.stale),
+    email: health.email || null,
+    error: health.error || null,
+    api: null,
+  }
+  if (!health.connected) return result
+
+  const listed = await calendarRequest("GET", "/events?maxResults=1")
+  result.api = {
+    ok: Boolean(listed.ok),
+    status: listed.status || (listed.ok ? 200 : null),
+    error: listed.ok ? null : listed.error || null,
+  }
+  return result
+}
+
 export async function isGoogleCalendarConnected() {
   const health = await getGoogleCalendarHealth()
   return health.connected
@@ -330,6 +352,21 @@ async function calendarRequest(method, pathname, body) {
 }
 
 export async function createGoogleCalendarEvent(appointment) {
+  if (appointment?.id) {
+    try {
+      const supabase = createAdminClient()
+      const { data } = await supabase
+        .from("appointments")
+        .select("google_event_id")
+        .eq("id", appointment.id)
+        .maybeSingle()
+      if (data?.google_event_id) {
+        return { ok: true, eventId: data.google_event_id, skipped: true }
+      }
+    } catch (err) {
+      console.warn("[gcal] precheck:", err.message)
+    }
+  }
   return calendarRequest("POST", "/events", eventPayload(appointment))
 }
 
