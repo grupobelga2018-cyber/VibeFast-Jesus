@@ -64,10 +64,7 @@ export default function GoogleCalendarPanel({
           ) : stale ? (
             <span className="badge badge-warning">Permiso caducado</span>
           ) : null}
-          <a
-            href="/api/google/calendar/connect"
-            className={`btn btn-sm ${oauthReady ? "btn-primary" : "btn-disabled"}`}
-          >
+          <a href="/api/google/calendar/connect" className="btn btn-sm btn-primary">
             {connected ? "Volver a conectar" : "Conectar Google Calendar"}
           </a>
         </div>
@@ -75,10 +72,12 @@ export default function GoogleCalendarPanel({
       {status && <p className={`mt-3 text-sm ${status.className}`}>{status.text}</p>}
       {!oauthReady && (
         <p className="mt-3 text-sm text-warning">
-          Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en Vercel (Production) o en .env.local.
+          Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en Vercel
+          (Production). Sin esas claves el bot no puede crear eventos, aunque
+          el botón de conectar sí funciona.
         </p>
       )}
-      {oauthReady && !connected && (
+      {!connected && (
         <ol className="mt-3 list-decimal space-y-1 pl-4 text-sm text-base-content/70">
           <li>
             Habilita{" "}
@@ -112,7 +111,7 @@ export default function GoogleCalendarPanel({
           </li>
           <li>
             En Google Cloud → Credentials agrega esta URI de redirección:{" "}
-            <code>https://vibe-fast-jesus-web.vercel.app/api/google/calendar/callback</code>
+            <code>https://vibe-fast-jesus-web.vercel.app/auth/callback</code>
             .
           </li>
           <li>Pulsa Conectar y acepta el permiso con esa misma cuenta.</li>

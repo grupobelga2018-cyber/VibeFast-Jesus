@@ -7,17 +7,13 @@ import {
   getService,
   zonedParts,
 } from "@/lib/appointments/helpers"
+import { GOOGLE_CALENDAR_SCOPES } from "@/lib/google/scopes"
+
+export { GOOGLE_CALENDAR_SCOPES }
 
 const GOOGLE_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 const GOOGLE_TOKEN = "https://oauth2.googleapis.com/token"
 const CALENDAR_API = "https://www.googleapis.com/calendar/v3"
-export const GOOGLE_CALENDAR_SCOPES = [
-  "openid",
-  "email",
-  "profile",
-  "https://www.googleapis.com/auth/calendar.events",
-].join(" ")
-
 const SCOPES = GOOGLE_CALENDAR_SCOPES
 
 const TOKEN_FILE = path.join(process.cwd(), ".google-calendar-token.json")
@@ -158,13 +154,21 @@ export async function isGoogleCalendarConnected() {
 export async function getGoogleCalendarHealth() {
   const auth = await loadGoogleCalendarAuth()
   if (!auth?.refresh_token) {
-    return { connected: false, stale: false, email: null }
+    return { connected: false, stale: false, email: auth?.email || null }
+  }
+  if (!googleOAuthConfigured()) {
+    return {
+      connected: false,
+      stale: true,
+      email: auth.email || null,
+      error: "missing_oauth",
+    }
   }
   const access = await getAccessToken()
   if (access.ok) {
     return { connected: true, stale: false, email: auth.email || null }
   }
-  const stale = /invalid_grant|invalid_rapt|unauthorized|expired/i.test(
+  const stale = /invalid_grant|invalid_rapt|unauthorized|expired|missing_oauth/i.test(
     String(access.error || "")
   )
   return {

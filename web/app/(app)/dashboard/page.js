@@ -61,7 +61,12 @@ export default async function DashboardPage({ searchParams }) {
   const upcoming = rest.filter(
     (a) => new Date(a.starts_at).toDateString() !== todayKey
   )
-  const googleHealth = await getGoogleCalendarHealth()
+  let googleHealth = { connected: false, stale: false, email: "" }
+  try {
+    googleHealth = await getGoogleCalendarHealth()
+  } catch (err) {
+    console.warn("[gcal] health:", err.message)
+  }
 
   return (
     <div className="space-y-8">

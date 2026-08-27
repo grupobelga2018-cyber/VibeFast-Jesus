@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { GOOGLE_CALENDAR_SCOPES } from "@/lib/google/scopes"
 
 // Botón de "Continuar con Google". Dispara el flujo OAuth de Supabase.
 // Tras autenticar, Google redirige a /auth/callback, que intercambia
@@ -15,7 +16,15 @@ export default function GoogleButton({ next = "/dashboard" }) {
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: {
+        redirectTo,
+        scopes: GOOGLE_CALENDAR_SCOPES,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+          include_granted_scopes: "true",
+        },
+      },
     })
     if (error) setLoading(false)
     // En éxito, el navegador navega a Google; no hay que resetear loading.
