@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import { Check } from "lucide-react"
 import config from "@/config"
@@ -6,59 +7,74 @@ export default function Pricing() {
   const { eyebrow, title, subtitle, plans } = config.pricing
 
   return (
-    <section id="pricing" className="border-t border-base-200 bg-base-100 py-20 md:py-28">
+    <section id="pricing" className="border-t border-primary/10 bg-base-200 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-medium uppercase tracking-wider text-primary">{eyebrow}</p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">{title}</h2>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
+          <h2 className="mt-3 text-3xl font-semibold md:text-4xl">{title}</h2>
           {subtitle && <p className="mt-4 text-base-content/70">{subtitle}</p>}
         </div>
 
-        <div className="mx-auto mt-14 grid max-w-4xl gap-6 md:grid-cols-2">
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className={`relative flex flex-col rounded-2xl border p-8 transition ${
+              className={`relative flex flex-col overflow-hidden rounded-2xl border bg-base-100 transition ${
                 plan.highlighted
-                  ? "border-primary shadow-lg shadow-primary/10"
-                  : "border-base-200 hover:border-primary/40 hover:shadow-md"
+                  ? "border-primary shadow-lg shadow-primary/15"
+                  : "border-primary/20 hover:border-primary/50 hover:shadow-md"
               }`}
             >
-              {plan.highlighted && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-content">
-                  Más popular
-                </span>
+              {plan.image && (
+                <div className="relative aspect-[4/5] w-full">
+                  <Image
+                    src={plan.image}
+                    alt={plan.name}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  />
+                  {plan.highlighted && (
+                    <span className="absolute top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-content">
+                      Más popular
+                    </span>
+                  )}
+                </div>
               )}
 
-              <h3 className="text-lg font-semibold">{plan.name}</h3>
-              <p className="mt-1 text-sm text-base-content/60">{plan.description}</p>
+              <div className="flex flex-1 flex-col p-6">
+                <h3 className="text-lg font-semibold">{plan.name}</h3>
+                <p className="mt-1 text-sm text-base-content/60">{plan.description}</p>
 
-              <div className="mt-6 flex items-baseline gap-1">
-                <span className="text-4xl font-bold tracking-tight">
-                  {plan.price === 0 ? "Gratis" : `$${plan.price}`}
-                </span>
-                {plan.price !== 0 && (
-                  <span className="text-sm text-base-content/60">
-                    {plan.currency}/{plan.interval}
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-2xl font-bold tracking-tight">
+                    {plan.price === 0
+                      ? "Gratis"
+                      : `Desde $${plan.price}${plan.currency ? ` ${plan.currency}` : ""}`}
                   </span>
-                )}
+                  {plan.price !== 0 && plan.interval && (
+                    <span className="text-sm text-base-content/60">
+                      {plan.currency}/{plan.interval}
+                    </span>
+                  )}
+                </div>
+
+                <ul className="mt-4 flex-1 space-y-2">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm">
+                      <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+                      <span className="text-base-content/80">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  href="#reservar"
+                  className={`btn mt-6 ${plan.highlighted ? "btn-accent" : "btn-outline btn-primary"}`}
+                >
+                  {plan.cta}
+                </Link>
               </div>
-
-              <ul className="mt-6 flex-1 space-y-3">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-sm">
-                    <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <span className="text-base-content/80">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href="#waitlist"
-                className={`btn mt-8 ${plan.highlighted ? "btn-accent" : "btn-outline"}`}
-              >
-                {plan.cta}
-              </Link>
             </div>
           ))}
         </div>

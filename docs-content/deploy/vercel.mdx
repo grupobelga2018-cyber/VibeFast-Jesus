@@ -1,6 +1,6 @@
 ---
 title: Deploy en Vercel
-description: De `git push` a URL pública en minutos.
+description: De `git push` a URL pública en minutos. Bot, citas y recordatorios sin tu PC.
 order: 1
 ---
 
@@ -16,11 +16,45 @@ order: 1
 
 ## Variables de entorno
 
-Settings → Environment Variables. Agrega todas las de tu `web/.env.local`. Marca scope:
+Settings → Environment Variables. Copia las de `web/.env.local`. Marca **Production** (y Preview si quieres).
 
-- `Production` — para tu URL principal.
-- `Preview` — para PRs.
-- `Development` — para `vercel dev` local.
+Obligatorio para que el bot y los cron no dependan de tu PC:
+
+- `NEXT_PUBLIC_APP_URL` = `https://TU-PROYECTO.vercel.app` (HTTPS, sin barra al final)
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_ADMIN_CHAT_ID`
+- `CRON_SECRET` (cadena larga aleatoria; Vercel la manda al cron como `Authorization: Bearer …`)
+- Calendly / Google / Resend si los usas (`CALENDLY_*`, `GOOGLE_OAUTH_*`, `RESEND_API_KEY`)
+
+Las `NEXT_PUBLIC_*` se incrustan en el build: **Redeploy** después de guardarlas.
+
+## Bot y webhooks (una vez)
+
+Telegram no puede hablar con `localhost`. En producción hay que registrar el webhook HTTPS.
+
+```bash
+curl -X POST "https://TU-PROYECTO.vercel.app/api/telegram/setup?key=TELEGRAM_WEBHOOK_SECRET"
+```
+
+Comprueba con GET a la misma URL: `webhook.url` debe ser `https://TU-PROYECTO.vercel.app/api/telegram/webhook`.
+
+**Calendly** → Webhooks: `https://TU-PROYECTO.vercel.app/api/webhooks/calendly` (`invitee.created` y `invitee.canceled`). El signing key = `CALENDLY_WEBHOOK_SIGNING_KEY`.
+
+**Supabase** → Authentication → URL Configuration:
+
+- Site URL: `https://TU-PROYECTO.vercel.app`
+- Redirect: `https://TU-PROYECTO.vercel.app/auth/callback`
+
+**Google Cloud** (OAuth): redirect URIs con esa base (`/auth/callback` y `/api/google/calendar/callback`). Luego, desde el **dashboard ya en Vercel**, Conectar Google Calendar.
+
+## Recordatorios (cron)
+
+Hobby solo corre cron **una vez al día** (`web/vercel.json`, ~10:00 CDMX). El job llama `/api/cron/appointment-reminders`.
+
+## No rompas producción con `yarn dev`
+
+Por defecto el poller local **no** arranca. Si pones `TELEGRAM_LOCAL_POLLER=1` en `.env.local`, `yarn dev` borra el webhook y el bot de Vercel deja de recibir mensajes hasta que vuelvas a correr el `curl` de setup.
 
 ## Deploys automáticos
 

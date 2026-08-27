@@ -7,7 +7,7 @@ import UserMenu from "@/components/auth/UserMenu"
 import Logo from "@/components/Logo"
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Agenda", icon: LayoutDashboard },
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/agent", label: "Agente", icon: Bot },
 ]
@@ -22,9 +22,13 @@ export default async function AppLayout({ children }) {
     <div className="flex min-h-screen flex-col bg-base-200">
       <header className="sticky top-0 z-40 border-b border-base-200 bg-base-100">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold">
-            <Logo className="size-7" />
-            {config.brand.logoText}
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 font-bold"
+            aria-label={config.app.name}
+          >
+            <Logo />
+            {!config.brand.logoSrc && config.brand.logoText}
           </Link>
           <UserMenu user={user} />
         </div>

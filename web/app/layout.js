@@ -1,11 +1,11 @@
 import "./globals.css"
-import { Space_Grotesk, DM_Sans } from "next/font/google"
+import { Playfair_Display, DM_Sans } from "next/font/google"
 import config from "@/config"
 
-const spaceGrotesk = Space_Grotesk({
+const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
-  variable: "--font-space-grotesk",
+  variable: "--font-playfair",
   display: "swap",
 })
 
@@ -30,9 +30,10 @@ export const metadata = {
     description: config.app.description,
     type: "website",
     locale: config.app.locale === "es" ? "es_MX" : "en_US",
+    images: config.brand.logoSrc ? [config.brand.logoSrc] : undefined,
   },
   twitter: { card: "summary_large_image" },
-  icons: { icon: "/favicon.svg" },
+  icons: { icon: config.brand.logoSrc || "/favicon.svg" },
 }
 
 export const viewport = {
@@ -47,7 +48,7 @@ export default function RootLayout({ children }) {
       lang={config.app.locale}
       data-theme="vibefast"
       suppressHydrationWarning
-      className={`${spaceGrotesk.variable} ${dmSans.variable}`}
+      className={`${playfair.variable} ${dmSans.variable}`}
       style={{ "--color-primary": config.brand.primary }}
     >
       <body className="bg-base-100 text-base-content">

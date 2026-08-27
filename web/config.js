@@ -1,146 +1,173 @@
 // ============================================================
-// VibeFast · config.js
+// Color Hair by Gabby · config.js
 // ------------------------------------------------------------
-// ESTE ES EL ARCHIVO MÁS IMPORTANTE DEL BOILERPLATE.
-// Todo el branding, copy, features y configuración del producto vive aquí.
-// Cambiar este archivo cambia el producto entero — sin abrir JSX.
-//
-// Estructura:
-//   - app:      identidad del producto (nombre, descripción, dominio, color)
-//   - features: toggles para encender/apagar funcionalidades
-//   - ai:       configuración de OpenAI
-//   - email:    configuración de Resend
-//   - auth:     providers habilitados
-//   - landing:  copy de la página pública
-//   - pricing:  planes (si features.payments está activo)
-//
-// Tip Sem 1: empieza editando `app` y `landing.hero` con los datos de tu producto.
+// Branding, copy, features y booking. Cambiar este archivo
+// cambia el producto sin abrir JSX.
 // ============================================================
 
 const config = {
-  // -----------------------------------------------------------
-  // Identidad del producto
-  // -----------------------------------------------------------
   app: {
     name: "Color Hair by Gabby",
     description:
       "Color, corte, peinados, faciales y maquillaje con Gaby Carmona: conoce el salón, los servicios y reserva con confianza antes de tu primera visita.",
-    domain: "colorhairbygabby.com", // sin https://, sin www
-    locale: "es", // "es" | "en"
-    // URL pública: usa NEXT_PUBLIC_APP_URL en .env. En este config solo definimos el default.
+    domain: "colorhairbygabby.com",
+    locale: "es",
     defaultUrl: "http://localhost:3000",
   },
 
-  // -----------------------------------------------------------
-  // Identidad visual
-  // -----------------------------------------------------------
   brand: {
-    // Color primario en HEX. DaisyUI lo aplica como --color-primary via theme.
-    primary: "#B76E79", // dusty rose — elegante, cálido, acorde a belleza
-    // Logo: puede ser texto o ruta a /public/logo.svg
-    logoText: "VibeFast",
-    logoSrc: null,
-    // Estilo del bordeado global (DaisyUI usa esto para botones, cards)
+    primary: "#C45B7A",
+    logoText: "Color Hair by Gabby",
+    logoSrc: "/logo.png",
     radius: "1rem",
   },
 
-  // -----------------------------------------------------------
-  // Toggles de features — encienden/apagan rutas y componentes
-  // -----------------------------------------------------------
   features: {
-    waitlist: true, // Captura emails en landing — Sem 1
-    googleAuth: true, // Login con Google — Sem 2
-    emailLogin: false, // Magic link email — opcional
-    aiChat: true, // Chat AI en /chat — Sem 3
-    toolUse: true, // Tool use registry — Sem 4
-    agents: true, // LangGraph agents — Sem 5
-    mcp: true, // Servidor MCP en /api/mcp — Sem 5
-    rag: false, // RAG con pgvector — opcional
-    posthog: false, // Tracking — opcional
-    resend: true, // Email — Sem 1+
-    pricing: true, // Muestra la sección de precios en la landing (vitrina; el cobro real es `payments`)
-    payments: false, // Stripe — opcional, fuera del temario
-    hardware: false, // ESP-Claw bridge — Sem 8
+    waitlist: false,
+    booking: true,
+    calendly: true,
+    telegramBot: true,
+    googleAuth: true,
+    googleCalendar: true,
+    emailLogin: false,
+    aiChat: true,
+    toolUse: true,
+    agents: true,
+    mcp: false,
+    rag: false,
+    posthog: false,
+    resend: true,
+    pricing: true, // muestra catálogo de servicios en landing
+    payments: false,
+    hardware: false,
   },
 
-  // -----------------------------------------------------------
-  // OpenAI
-  // -----------------------------------------------------------
+  // Catálogo de servicios (landing + bot Telegram)
+  services: [
+    {
+      slug: "corte",
+      name: "Corte",
+      durationMin: 60,
+      priceFrom: 350,
+      currency: "MXN",
+      description: "Corte personalizado según tu tipo de cabello y estilo.",
+    },
+    {
+      slug: "color",
+      name: "Color",
+      durationMin: 120,
+      priceFrom: 800,
+      currency: "MXN",
+      description: "Coloración profesional con diagnóstico previo.",
+    },
+    {
+      slug: "peinado",
+      name: "Peinado",
+      durationMin: 90,
+      priceFrom: 450,
+      currency: "MXN",
+      description: "Peinados para eventos, bodas o el día a día.",
+    },
+    {
+      slug: "facial",
+      name: "Facial",
+      durationMin: 75,
+      priceFrom: 500,
+      currency: "MXN",
+      description: "Limpieza y cuidado facial adaptado a tu piel.",
+    },
+    {
+      slug: "maquillaje",
+      name: "Maquillaje",
+      durationMin: 60,
+      priceFrom: 600,
+      currency: "MXN",
+      description: "Maquillaje profesional para ocasiones especiales.",
+    },
+  ],
+
+  booking: {
+    calendlyUrl:
+      process.env.NEXT_PUBLIC_CALENDLY_URL ||
+      "https://calendly.com/colorhairbygabby",
+    telegramBotUsername:
+      process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "ColorHairGabbyBot",
+    telegramDeepLink:
+      process.env.NEXT_PUBLIC_TELEGRAM_DEEP_LINK ||
+      "https://t.me/ColorHairGabbyBot",
+    timezone: "America/Mexico_City",
+  },
+
+  contact: {
+    phone: "+52 614 286 0158",
+    tel: "tel:+526142860158",
+    whatsapp: "https://wa.me/526142860158",
+  },
+
   ai: {
-    chatModel: "gpt-4o-mini", // default barato y rápido
+    chatModel: "gpt-4o-mini",
     structuredModel: "gpt-4o-mini",
-    agentModel: "gpt-4o", // los agentes razonan mejor con full gpt-4o
+    agentModel: "gpt-4o",
     embeddingModel: "text-embedding-3-small",
     maxTokens: 1500,
     temperature: 0.4,
   },
 
-  // -----------------------------------------------------------
-  // Resend (email transaccional)
-  // -----------------------------------------------------------
   email: {
-    // Asegúrate de tener el dominio verificado en Resend antes de cambiar `from`.
-    // En desarrollo Resend permite enviar a tu propio correo desde `onboarding@resend.dev`.
-    from: "VibeFast <onboarding@resend.dev>",
-    replyTo: "hola@vibefast.dev",
-    supportEmail: "soporte@vibefast.dev",
+    from: "Color Hair by Gabby <onboarding@resend.dev>",
+    replyTo: "hola@colorhairbygabby.com",
+    supportEmail: "hola@colorhairbygabby.com",
   },
 
-  // -----------------------------------------------------------
-  // Auth providers
-  // -----------------------------------------------------------
   auth: {
     loginUrl: "/login",
     afterLoginUrl: "/dashboard",
     afterLogoutUrl: "/",
-    providers: ["google"], // se sincroniza con features.googleAuth / emailLogin
+    providers: ["google"],
   },
 
-  // -----------------------------------------------------------
-  // Landing — todo el copy de la página pública
-  // -----------------------------------------------------------
   landing: {
     nav: [
-      { label: "Características", href: "#features" },
-      { label: "Precios", href: "#pricing" },
+      { label: "Servicios", href: "#pricing" },
+      { label: "Reservar", href: "#reservar" },
       { label: "Preguntas", href: "#faq" },
-      { label: "Docs", href: "/docs" },
     ],
     hero: {
       eyebrow: "Salón de belleza · Primera visita clara",
       title: "Llega a tu primera cita sin dudas.",
       subtitle:
-        "Conoce el ambiente, los servicios y lo que esperar antes de escribirnos.",
-      cta: { label: "Reservar cita", href: "#waitlist" },
-      ctaSecondary: { label: "Ver docs", href: "/docs" },
+        "Conoce el ambiente, los servicios y lo que esperar. Reserva en línea o por Telegram con Gaby.",
+      cta: { label: "Reservar cita", href: "#reservar" },
+      ctaSecondary: { label: "Ver servicios", href: "#pricing" },
+      image: "/services/peinado.png",
     },
     problem: {
-      eyebrow: "El problema",
-      title: "Las dudas antes del primer contacto con el salón.",
+      eyebrow: "Antes de llegar",
+      title: "Las dudas que frenan la primera visita.",
       subtitle:
-        "La mayoría de las clientas no tienen información de los servicios y los costos del salón antes de llegar.",
+        "Sin información clara de servicios, tiempos y cómo agendar, muchas clientas posponen su cita.",
       items: [
         {
-          icon: "Timer",
-          title: "Semanas en boilerplate",
-          body: "Auth, base de datos, deploy, emails… configuras lo mismo que todos antes de validar nada.",
+          icon: "HelpCircle",
+          title: "No sé qué servicio necesito",
+          body: "Entre color, corte y tratamientos es fácil confundirse sin una guía sencilla.",
         },
         {
-          icon: "Puzzle",
-          title: "Parálisis por herramientas",
-          body: "Cada capa tiene 10 opciones. Comparas en vez de construir y pierdes el hilo.",
+          icon: "Clock",
+          title: "No sé cuánto tiempo tomará",
+          body: "Reservar a ciegas genera ansiedad. Aquí ves duración orientativa de cada servicio.",
         },
         {
-          icon: "PlugZap",
-          title: "La IA no se integra sola",
-          body: "Structured outputs, tool use, agentes y MCP suenan bien hasta que hay que cablearlos.",
+          icon: "MessageCircle",
+          title: "Prefiero preguntar por chat",
+          body: "También puedes agendar por Telegram con Gaby, a tu ritmo y con confirmación clara.",
         },
       ],
     },
     features: {
-      eyebrow: "Lo que ya viene listo",
-      title: "Stack completo, una sola decisión por capa.",
-      subtitle: "No pierdes tiempo eligiendo herramientas. Te enfocas en tu producto.",
+      eyebrow: "Tu experiencia",
+      title: "Todo listo para tu primera visita.",
+      subtitle: "Transparencia, agenda fácil y acompañamiento hasta el día de tu cita.",
       items: [
         {
           icon: "Images",
@@ -155,7 +182,7 @@ const config = {
         {
           icon: "CalendarCheck",
           title: "Agenda en un clic",
-          body: "Elige horario, deja tus datos y recibe confirmación sin vueltas ni incertidumbre.",
+          body: "Reserva en Calendly o por Telegram. Confirmación y recordatorio incluidos.",
         },
       ],
     },
@@ -165,133 +192,172 @@ const config = {
       items: [
         {
           q: "¿Necesito cita previa?",
-          a: "Sí. Así te dedicamos el tiempo completo y evitas esperas. Puedes reservar desde esta página en pocos minutos.",
+          a: "Sí. Así te dedicamos el tiempo completo y evitas esperas. Puedes reservar en línea o por Telegram.",
         },
         {
           q: "¿Cuánto dura la primera visita?",
-          a: "Depende del servicio. Un corte suele tomar 45–60 min; color o tratamientos, entre 90 y 150 min. Te lo confirmamos al agendar.",
+          a: "Depende del servicio. Un corte suele tomar 45–60 min; color o tratamientos, entre 90 y 150 min.",
         },
         {
           q: "¿Qué pasa si es mi primera vez?",
-          a: "Empezamos con una consulta breve para entender lo que buscas. Sin presión: tú decides el servicio antes de empezar.",
+          a: "Empezamos con una consulta breve para entender lo que buscas. Sin presión: tú decides el servicio.",
+        },
+        {
+          q: "¿Puedo reprogramar?",
+          a: "Sí. Escríbele al bot de Telegram o a Gaby y actualizamos tu cita con confirmación nueva.",
         },
         {
           q: "¿Cómo llego y dónde me estaciono?",
-          a: "Al confirmar tu cita te enviamos la dirección exacta, referencias y opciones de estacionamiento cercanas.",
+          a: "Al confirmar tu cita te enviamos la dirección exacta, referencias y opciones de estacionamiento.",
         },
       ],
     },
     socialProof: {
       text: "Clientas que ya eligieron nuestros servicios",
-      logos: ["Remotto", "Startup Chihuahua", "Next.js", "Supabase", "OpenAI", "Vercel"],
+      logos: ["Color", "Corte", "Peinado", "Facial", "Maquillaje"],
     },
     testimonials: {
       eyebrow: "Prueba social",
       title: "Clientas que han disfrutado de nuestros servicios.",
-      subtitle: "Testimonios de experiencias satisfactorias.",
+      subtitle: "Experiencias reales en el salón.",
       items: [
         {
           quote:
-            "Pasé de una idea en Notion a un MVP con IA en producción en dos semanas. Nunca había tocado código.",
-          author: "Ana Márquez",
-          role: "Founder · Fisio en casa",
+            "Agendé por la web en minutos y me llegó el recordatorio un día antes. Llegué tranquila y sin dudas.",
+          author: "Mariana R.",
+          role: "Color + corte",
         },
         {
           quote:
-            "El boilerplate ya traía auth, base de datos y el agente cableados. Solo describí lo que quería en Cursor.",
-          author: "Diego Sáenz",
-          role: "Founder · Tutor IA",
+            "Preferí Telegram. Gaby me ayudó a elegir el servicio y confirmamos el horario al instante.",
+          author: "Sofía L.",
+          role: "Primera visita",
         },
         {
           quote:
-            "Las docs semana a semana fueron mi mapa. Copiaba el prompt, ajustaba y avanzaba sin atorarme.",
-          author: "Lucía Fernández",
-          role: "Founder · Recetario inteligente",
+            "Reprogramé por el chat sin drama. La cita quedó clara y el resultado del peinado fue hermoso.",
+          author: "Andrea V.",
+          role: "Peinado de evento",
         },
       ],
     },
+    booking: {
+      eyebrow: "Reservar",
+      title: "Elige cómo agendar tu cita.",
+      subtitle:
+        "Reserva en línea con Calendly o escribe por Telegram. En ambos casos recibes confirmación y recordatorio.",
+      onlineTitle: "En línea",
+      onlineBody: "Escoge día y hora en la agenda. Ideal si ya sabes qué servicio quieres.",
+      onlineCta: "Abrir agenda",
+      telegramTitle: "Por Telegram",
+      telegramBody:
+        "Coordina servicio, día y hora con el asistente. Gaby confirma el cupo y te llega la confirmación por Telegram, con recordatorio 24 h antes.",
+      telegramCta: "INICIA CONVERSACIÓN",
+    },
     finalCta: {
       eyebrow: "Tu turno",
-      title: "Deja de configurar. Empieza a construir.",
+      title: "Agenda tu cita con Gaby hoy.",
       subtitle:
-        "Clona la plantilla, edita config.js y ten tu producto AI-native en producción esta semana.",
-      cta: { label: "Únete al waitlist", href: "#waitlist" },
-      ctaSecondary: { label: "Leer las docs", href: "/docs" },
+        "Elige horario en línea o escribe por Telegram. Te confirmamos y te recordamos un día antes.",
+      cta: { label: "Reservar cita", href: "#reservar" },
+      ctaSecondary: { label: "Ver servicios", href: "#pricing" },
     },
     waitlist: {
       eyebrow: "Únete primero",
       title: "Sé de los primeros en saber.",
-      subtitle: "Te avisamos cuando abramos cupos para la siguiente cohorte.",
+      subtitle: "Te avisamos cuando haya cupos nuevos.",
       successMessage: "¡Listo! Te avisamos en cuanto haya novedades.",
       buttonLabel: "Quiero entrar",
       placeholder: "tu@email.com",
     },
     footer: {
-      tagline: "Construido para founders. Por Remotto × Startup Chihuahua.",
+      tagline: "Color Hair by Gabby · belleza con claridad desde la primera cita.",
       columns: [
         {
-          title: "Producto",
+          title: "Salón",
           links: [
-            { label: "Características", href: "#features" },
-            { label: "Precios", href: "#pricing" },
+            { label: "Servicios", href: "#pricing" },
+            { label: "Reservar", href: "#reservar" },
             { label: "Preguntas", href: "#faq" },
           ],
         },
         {
-          title: "Recursos",
+          title: "Contacto",
           links: [
-            { label: "Docs", href: "/docs" },
-            { label: "Quick start", href: "/docs/setup/quick-start" },
-            { label: "Troubleshooting", href: "/docs/troubleshooting/errores-comunes" },
-          ],
-        },
-        {
-          title: "Comunidad",
-          links: [
-            { label: "GitHub", href: "https://github.com/arampersand/VibeFast", external: true },
-            { label: "Remotto", href: "https://remotto.com", external: true },
+            { label: "+52 614 286 0158", href: "tel:+526142860158" },
+            { label: "Telegram", href: "https://t.me/ColorHairGabbyBot", external: true },
+            { label: "Agenda en línea", href: "#reservar" },
           ],
         },
       ],
-      // Compat: links planos usados en el bar inferior
       links: [
-        { label: "Docs", href: "/docs" },
-        { label: "GitHub", href: "https://github.com/arampersand/VibeFast", external: true },
+        { label: "Reservar", href: "#reservar" },
+        { label: "Telegram", href: "https://t.me/ColorHairGabbyBot", external: true },
       ],
     },
   },
 
-  // -----------------------------------------------------------
-  // Pricing — vitrina de planes.
-  // Se muestra en la landing si features.pricing === true.
-  // El cobro real (Stripe) depende de features.payments.
-  // -----------------------------------------------------------
+  // Usa la sección pricing de la landing como vitrina de servicios
   pricing: {
-    eyebrow: "Precios",
-    title: "Simple y sin sorpresas.",
-    subtitle: "Empieza gratis. Sube de plan cuando tu producto crezca.",
+    eyebrow: "Servicios",
+    title: "Elige lo que necesitas.",
+    subtitle: "Precios desde (orientativos). Al agendar te confirmamos el detalle.",
     plans: [
       {
-        id: "starter",
-        name: "Starter",
-        price: 0,
-        currency: "USD",
-        interval: "mes",
-        description: "Para probar el producto.",
-        features: ["Hasta 100 usuarios", "Soporte por email", "Branding VibeFast"],
-        cta: "Empezar gratis",
+        id: "corte",
+        name: "Corte",
+        price: 350,
+        currency: "MXN",
+        interval: "",
+        description: "60 min · personalizado a tu estilo.",
+        features: ["Consulta breve", "Lavado incluido", "Acabado"],
+        cta: "Reservar",
+        image: "/services/corte.png",
       },
       {
-        id: "pro",
-        name: "Pro",
-        price: 29,
-        currency: "USD",
-        interval: "mes",
-        description: "Para founders que ya facturan.",
-        features: ["Usuarios ilimitados", "Soporte prioritario", "Sin branding"],
-        cta: "Probar Pro",
+        id: "color",
+        name: "Color",
+        price: 800,
+        currency: "MXN",
+        interval: "",
+        description: "120 min · diagnóstico + coloración.",
+        features: ["Diagnóstico de cabello", "Color profesional", "Cuidado post"],
+        cta: "Reservar",
         highlighted: true,
-        stripePriceId: "", // llenar cuando se active payments
+        image: "/services/color.png",
+      },
+      {
+        id: "peinado",
+        name: "Peinado",
+        price: 450,
+        currency: "MXN",
+        interval: "",
+        description: "90 min · eventos, bodas o día a día.",
+        features: ["Estilo a tu ocasión", "Fijación duradera", "Acabado"],
+        cta: "Reservar",
+        image: "/services/peinado.png",
+      },
+      {
+        id: "facial",
+        name: "Facial",
+        price: 500,
+        currency: "MXN",
+        interval: "",
+        description: "75 min · limpieza y cuidado de piel.",
+        features: ["Diagnóstico de piel", "Limpieza profunda", "Hidratación"],
+        cta: "Reservar",
+        image: "/services/facial.png",
+      },
+      {
+        id: "maquillaje",
+        name: "Maquillaje",
+        price: 600,
+        currency: "MXN",
+        interval: "",
+        description: "60 min · profesional para ocasiones especiales.",
+        features: ["Maquillaje de evento", "Productos profesionales", "Retoque incluido"],
+        cta: "Reservar",
+        image: "/services/maquillaje.png",
       },
     ],
   },

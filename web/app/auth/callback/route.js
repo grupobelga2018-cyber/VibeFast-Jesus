@@ -1,6 +1,10 @@
 import { NextResponse, after } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { sendWelcome } from "@/lib/resend/send"
+import {
+  captureGoogleCalendarFromSession,
+  syncOpenAppointmentsToGoogle,
+} from "@/lib/google/calendar"
 
 // En el primer login, created_at y last_sign_in_at quedan casi idénticos.
 // Si difieren en menos de este margen, lo tratamos como alta nueva.
@@ -13,11 +17,25 @@ export async function GET(request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get("code")
   const next = searchParams.get("next") ?? "/dashboard"
+  const oauthError = searchParams.get("error")
+
+  if (oauthError) {
+    const denied = oauthError === "access_denied" ? "access_denied" : "auth"
+    return NextResponse.redirect(`${origin}/login?error=${denied}`)
+  }
 
   if (code) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      await captureGoogleCalendarFromSession(data.session).catch((err) => {
+        console.warn("[gcal] capture session:", err.message)
+      })
+      after(() => {
+        syncOpenAppointmentsToGoogle().catch((err) => {
+          console.warn("[gcal] backfill:", err.message)
+        })
+      })
       // Bienvenida solo en el primer login. Best-effort, post-respuesta.
       after(async () => {
         const {

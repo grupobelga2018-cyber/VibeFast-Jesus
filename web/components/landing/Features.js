@@ -6,23 +6,21 @@ function Icon({ name, className }) {
   return <Cmp className={className} />
 }
 
-// Paleta de chips que cicla por item (clases literales para el JIT de Tailwind).
 const CHIP_COLORS = [
   "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-content",
   "bg-accent/10 text-accent group-hover:bg-accent group-hover:text-accent-content",
-  "bg-info/10 text-info group-hover:bg-info group-hover:text-info-content",
-  "bg-success/10 text-success group-hover:bg-success group-hover:text-success-content",
+  "bg-secondary/10 text-secondary group-hover:bg-secondary group-hover:text-secondary-content",
 ]
 
 export default function Features() {
   const { eyebrow, title, subtitle, items } = config.landing.features
 
   return (
-    <section id="features" className="border-t border-base-200 bg-base-100 py-20 md:py-28">
+    <section id="features" className="border-t border-primary/10 bg-base-100 py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-4">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-medium uppercase tracking-wider text-primary">{eyebrow}</p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">{title}</h2>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
+          <h2 className="mt-3 text-3xl font-semibold md:text-4xl">{title}</h2>
           {subtitle && <p className="mt-4 text-base-content/70">{subtitle}</p>}
         </div>
 
@@ -30,7 +28,7 @@ export default function Features() {
           {items.map((item, i) => (
             <li
               key={item.title}
-              className="group rounded-2xl border border-base-200 bg-base-100 p-6 transition hover:border-primary/40 hover:shadow-md"
+              className="group rounded-2xl border border-primary/20 bg-base-100 p-6 transition hover:border-primary/50 hover:shadow-md"
             >
               <div
                 className={
