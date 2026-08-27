@@ -7,7 +7,7 @@ const STATUS = {
   },
   missing_oauth: {
     className: "text-warning",
-    text: "El botón de conectar no basta: Vercel no tiene las claves de Google, así que el bot no puede crear eventos.",
+    text: "Este deploy no cargó las claves. Si ya las ves en Vercel, fíjate que estén en Production y haz Redeploy (sin caché).",
   },
   denied: {
     className: "text-error",
@@ -67,7 +67,7 @@ export default function GoogleCalendarPanel({
               Conectado{email ? ` · ${email}` : ""}
             </span>
           ) : blockedByEnv ? (
-            <span className="badge badge-warning">Faltan claves en Vercel</span>
+            <span className="badge badge-warning">Este deploy no cargó las claves</span>
           ) : stale ? (
             <span className="badge badge-warning">Permiso caducado</span>
           ) : null}
@@ -89,16 +89,18 @@ export default function GoogleCalendarPanel({
             (Production).
           </li>
           <li>
-            Agrega estas dos, copiadas de <code>web/.env.local</code>:
+            Si ya están, no hace falta volver a pegarlas: Deployments → el
+            último deploy → <b>Redeploy</b> y desmarca “Use existing Build
+            Cache”.
+          </li>
+          <li>
+            Si no están, agrégalas desde <code>web/.env.local</code>:
             <ul className="mt-1 list-disc pl-5 font-mono text-xs">
               <li>GOOGLE_OAUTH_CLIENT_ID</li>
               <li>GOOGLE_OAUTH_CLIENT_SECRET</li>
             </ul>
           </li>
-          <li>
-            Deployments → el último deploy → <b>Redeploy</b> (sin usar caché).
-          </li>
-          <li>Vuelve a esta página: el botón Conectar Google Calendar aparece cuando las claves ya están.</li>
+          <li>Vuelve a esta página: el botón Conectar Google Calendar aparece cuando este deploy ya cargó las claves.</li>
         </ol>
       )}
       {!blockedByEnv && !connected && (

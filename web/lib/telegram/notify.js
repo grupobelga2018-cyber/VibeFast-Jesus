@@ -3,6 +3,7 @@ import {
   formatAppointmentWhen,
   getService,
 } from "@/lib/appointments/helpers"
+import { loadGoogleCalendarAuth } from "@/lib/google/calendar"
 import {
   getAdminChatId,
   isTelegramConfigured,
@@ -29,7 +30,7 @@ function gabyKeyboard(appointmentId, rescheduled) {
 
 export async function notifyGabyAppointment(
   appointment,
-  { rescheduled = false } = {}
+  { rescheduled = false, googleError = null } = {}
 ) {
   if (!isTelegramConfigured()) return { ok: false, skipped: true }
   const adminChatId = getAdminChatId()
@@ -42,6 +43,12 @@ export async function notifyGabyAppointment(
   const waiting =
     appointment.channel === "telegram" &&
     (appointment.status === "pending" || Boolean(proposed))
+  const calendarEmail = (await loadGoogleCalendarAuth())?.email || ""
+  const googleLine = appointment.google_event_id
+    ? `Google Calendar: ya está en calendar.google.com${calendarEmail ? ` (${calendarEmail})` : ""}.`
+    : googleError
+      ? `Google Calendar: no se grabó (${googleError}).`
+      : "Google Calendar: aún no se grabó."
 
   const lines = waiting
     ? [
@@ -70,9 +77,7 @@ export async function notifyGabyAppointment(
         appointment.calendly_event_uri
           ? "Calendly: ya está en el calendario."
           : null,
-        appointment.google_event_id
-          ? "Google Calendar: ya está en el calendario."
-          : "Google Calendar: aún no se grabó.",
+        googleLine,
       ]
 
   return sendTelegramMessage(adminChatId, lines.filter(Boolean).join("\n"), {

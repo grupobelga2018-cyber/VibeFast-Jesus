@@ -74,7 +74,7 @@ export async function confirmAppointment(id, { reschedule = false } = {}) {
 
   await sendAppointmentConfirmation(data, {
     rescheduled: applyingReschedule,
-    calendarSynced: Boolean(gcal.ok),
+    calendarSynced: Boolean(data.google_event_id),
   }).catch(() => {})
 
   return { ok: true, appointment: data, rescheduled: applyingReschedule }
@@ -186,11 +186,16 @@ export async function requestTelegramBooking(payload) {
   if (gcal.ok) {
     appointment.google_event_id = gcal.eventId
     await persistGoogleEventId(appointment.id, gcal.eventId)
+  } else if (!gcal.skipped) {
+    console.error("[gcal] telegram booking:", gcal.error)
   }
 
-  await notifyGabyAppointment(appointment, { rescheduled: false }).catch(() => {})
+  await notifyGabyAppointment(appointment, {
+    rescheduled: false,
+    googleError: gcal.ok ? null : gcal.error || "no se pudo crear el evento",
+  }).catch(() => {})
   await sendAppointmentConfirmation(appointment, {
-    calendarSynced: Boolean(gcal.ok),
+    calendarSynced: Boolean(appointment.google_event_id),
   }).catch(() => {})
 
   const calendlyNote = booked.ok

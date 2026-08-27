@@ -21,9 +21,18 @@ const TOKEN_FILE = path.join(process.cwd(), ".google-calendar-token.json")
 let memoryAuth = null
 let memoryAccess = null
 
+function envValue(name) {
+  // Acceso dinámico: Next/Vercel no puede vaciar la clave en el build.
+  const runtimeEnv = globalThis.process?.env
+  const raw = runtimeEnv ? runtimeEnv[String(name)] : ""
+  return String(raw || "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+}
+
 export function googleOAuthConfigured() {
   return Boolean(
-    process.env.GOOGLE_OAUTH_CLIENT_ID && process.env.GOOGLE_OAUTH_CLIENT_SECRET
+    envValue("GOOGLE_OAUTH_CLIENT_ID") && envValue("GOOGLE_OAUTH_CLIENT_SECRET")
   )
 }
 
@@ -44,7 +53,7 @@ export function googleCalendarRedirectUri(origin) {
 
 export function googleCalendarAuthUrl(state, origin) {
   const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
+    client_id: envValue("GOOGLE_OAUTH_CLIENT_ID"),
     redirect_uri: googleCalendarRedirectUri(origin),
     response_type: "code",
     scope: SCOPES,
@@ -66,7 +75,7 @@ function salonDateTimeLocal(date) {
 }
 
 function calendarId() {
-  return process.env.GOOGLE_CALENDAR_ID || "primary"
+  return envValue("GOOGLE_CALENDAR_ID") || "primary"
 }
 
 function readTokenFile() {
@@ -118,10 +127,10 @@ export async function loadGoogleCalendarAuth() {
     return memoryAuth
   }
 
-  if (process.env.GOOGLE_CALENDAR_REFRESH_TOKEN) {
+  if (envValue("GOOGLE_CALENDAR_REFRESH_TOKEN")) {
     memoryAuth = {
-      refresh_token: process.env.GOOGLE_CALENDAR_REFRESH_TOKEN,
-      email: process.env.GOOGLE_CALENDAR_EMAIL || null,
+      refresh_token: envValue("GOOGLE_CALENDAR_REFRESH_TOKEN"),
+      email: envValue("GOOGLE_CALENDAR_EMAIL") || null,
       calendar_id: calendarId(),
     }
     return memoryAuth
@@ -183,8 +192,8 @@ export async function getGoogleCalendarHealth() {
 export async function exchangeGoogleCode(code, origin) {
   const body = new URLSearchParams({
     code,
-    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
-    client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    client_id: envValue("GOOGLE_OAUTH_CLIENT_ID"),
+    client_secret: envValue("GOOGLE_OAUTH_CLIENT_SECRET"),
     redirect_uri: googleCalendarRedirectUri(origin),
     grant_type: "authorization_code",
   })
@@ -203,8 +212,8 @@ export async function exchangeGoogleCode(code, origin) {
 async function refreshAccessToken(refreshToken) {
   const body = new URLSearchParams({
     refresh_token: refreshToken,
-    client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
-    client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    client_id: envValue("GOOGLE_OAUTH_CLIENT_ID"),
+    client_secret: envValue("GOOGLE_OAUTH_CLIENT_SECRET"),
     grant_type: "refresh_token",
   })
   const res = await fetch(GOOGLE_TOKEN, {
@@ -366,8 +375,8 @@ export async function syncOpenAppointmentsToGoogle() {
       .from("appointments")
       .select("*")
       .is("google_event_id", null)
-      .in("status", ["pending", "confirmed", "rescheduled"])
-      .gte("starts_at", new Date().toISOString())
+      .neq("status", "cancelled")
+      .gte("starts_at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString())
       .limit(25)
     if (error) {
       console.warn("[gcal] backfill list:", error.message)

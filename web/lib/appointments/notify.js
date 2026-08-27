@@ -3,6 +3,7 @@ import {
   getService,
 } from "@/lib/appointments/helpers"
 import { sendTelegramMessage, isTelegramConfigured } from "@/lib/telegram/client"
+import { loadGoogleCalendarAuth } from "@/lib/google/calendar"
 import config from "@/config"
 
 function serviceWhen(appointment, startsAt = appointment.starts_at) {
@@ -26,6 +27,7 @@ export async function sendAppointmentConfirmation(
       ? "Cita reprogramada"
       : "Cita confirmada"
 
+  const calendarEmail = (await loadGoogleCalendarAuth())?.email || ""
   const onCalendar =
     calendarSynced == null
       ? Boolean(appointment.google_event_id || appointment.calendly_event_uri)
@@ -38,9 +40,9 @@ export async function sendAppointmentConfirmation(
     `Cuándo: ${when}`,
     appointment.client_name ? `A nombre de: ${appointment.client_name}` : null,
     onCalendar && appointment.google_event_id
-      ? "Quedó también en el Google Calendar de Gaby."
+      ? `Quedó en Google Calendar${calendarEmail ? ` (${calendarEmail})` : ""}. Ábrelo con esa cuenta.`
       : onCalendar && appointment.calendly_event_uri
-        ? "Quedó también en el calendario de Gaby (Calendly)."
+        ? "Quedó en Calendly; eso no es Google Calendar."
         : null,
     "",
     reminder

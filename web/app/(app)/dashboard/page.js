@@ -91,10 +91,10 @@ export default async function DashboardPage({ searchParams }) {
       )}
 
       <GoogleCalendarPanel
-        oauthReady={googleOAuthConfigured()}
+        oauthReady={googleOAuthConfigured() || !googleHealth.needsEnv}
         connected={googleHealth.connected}
         stale={googleHealth.stale}
-        needsEnv={Boolean(googleHealth.needsEnv) || !googleOAuthConfigured()}
+        needsEnv={Boolean(googleHealth.needsEnv)}
         email={googleHealth.email || ""}
         googleStatus={
           !googleOAuthConfigured()
@@ -261,17 +261,18 @@ function AppointmentRow({ appt }) {
             </>
           )}
 
+          {!appt.google_event_id && appt.status !== "cancelled" && (
+            <form action={syncAppointmentToGoogle}>
+              <input type="hidden" name="id" value={appt.id} />
+              <button type="submit" className="btn btn-outline btn-sm gap-1">
+                <CalendarPlus className="size-4" />
+                Subir a Google
+              </button>
+            </form>
+          )}
+
           {["confirmed", "rescheduled"].includes(appt.status) && (
             <>
-              {!appt.google_event_id && (
-                <form action={syncAppointmentToGoogle}>
-                  <input type="hidden" name="id" value={appt.id} />
-                  <button type="submit" className="btn btn-outline btn-sm gap-1">
-                    <CalendarPlus className="size-4" />
-                    Subir a Google
-                  </button>
-                </form>
-              )}
               {!appt.calendly_event_uri && (
                 <form action={syncAppointmentToCalendly}>
                   <input type="hidden" name="id" value={appt.id} />
