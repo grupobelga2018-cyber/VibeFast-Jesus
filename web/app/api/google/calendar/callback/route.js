@@ -5,6 +5,7 @@ import {
   exchangeGoogleCode,
   fetchGoogleEmail,
   saveGoogleCalendarAuth,
+  syncOpenAppointmentsToGoogle,
 } from "@/lib/google/calendar"
 
 export const runtime = "nodejs"
@@ -37,7 +38,7 @@ export async function GET(request) {
     return NextResponse.redirect(dash)
   }
 
-  const tokens = await exchangeGoogleCode(code)
+  const tokens = await exchangeGoogleCode(code, url.origin)
   if (!tokens.ok || !tokens.refresh_token) {
     dash.searchParams.set("google", "no_refresh")
     return NextResponse.redirect(dash)
@@ -49,6 +50,10 @@ export async function GET(request) {
   await saveGoogleCalendarAuth({
     refresh_token: tokens.refresh_token,
     email,
+  })
+
+  await syncOpenAppointmentsToGoogle().catch((err) => {
+    console.warn("[gcal] backfill:", err.message)
   })
 
   dash.searchParams.set("google", "connected")

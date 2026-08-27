@@ -7,11 +7,15 @@ const STATUS = {
   },
   missing_oauth: {
     className: "text-warning",
-    text: "Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en .env.local.",
+    text: "Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en Vercel (Production) o en .env.local.",
   },
   denied: {
     className: "text-error",
     text: "Google negó el permiso (403). Agrega tu Gmail en Test users y vuelve a conectar.",
+  },
+  expired: {
+    className: "text-warning",
+    text: "El permiso de Testing caduca a los 7 días. Vuelve a pulsar Conectar Google Calendar.",
   },
   access_denied: {
     className: "text-error",
@@ -34,6 +38,7 @@ const STATUS = {
 export default function GoogleCalendarPanel({
   oauthReady,
   connected,
+  stale,
   email,
   googleStatus,
 }) {
@@ -51,23 +56,26 @@ export default function GoogleCalendarPanel({
             Las citas del bot y del dashboard se crean en el calendario de Gaby.
           </p>
         </div>
-        {connected ? (
-          <span className="badge badge-success">
-            Conectado{email ? ` · ${email}` : ""}
-          </span>
-        ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {connected ? (
+            <span className="badge badge-success">
+              Conectado{email ? ` · ${email}` : ""}
+            </span>
+          ) : stale ? (
+            <span className="badge badge-warning">Permiso caducado</span>
+          ) : null}
           <a
             href="/api/google/calendar/connect"
             className={`btn btn-sm ${oauthReady ? "btn-primary" : "btn-disabled"}`}
           >
-            Conectar Google Calendar
+            {connected ? "Volver a conectar" : "Conectar Google Calendar"}
           </a>
-        )}
+        </div>
       </div>
       {status && <p className={`mt-3 text-sm ${status.className}`}>{status.text}</p>}
       {!oauthReady && (
         <p className="mt-3 text-sm text-warning">
-          Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en .env.local.
+          Faltan GOOGLE_OAUTH_CLIENT_ID y GOOGLE_OAUTH_CLIENT_SECRET en Vercel (Production) o en .env.local.
         </p>
       )}
       {oauthReady && !connected && (
@@ -96,10 +104,16 @@ export default function GoogleCalendarPanel({
             </a>{" "}
             deja el estado en <b>Testing</b> y agrega el Gmail de Gaby en{" "}
             <b>Test users</b>. Sin eso Google responde 403 access_denied.
+            En Testing el permiso dura 7 días: hay que reconectar o publicar la app.
           </li>
           <li>
             En Data Access agrega el scope{" "}
             <code>https://www.googleapis.com/auth/calendar.events</code>.
+          </li>
+          <li>
+            En Google Cloud → Credentials agrega esta URI de redirección:{" "}
+            <code>https://vibe-fast-jesus-web.vercel.app/api/google/calendar/callback</code>
+            .
           </li>
           <li>Pulsa Conectar y acepta el permiso con esa misma cuenta.</li>
         </ol>

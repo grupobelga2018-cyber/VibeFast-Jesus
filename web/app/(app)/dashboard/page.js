@@ -12,9 +12,8 @@ import { isTelegramConfigured } from "@/lib/telegram/client"
 import { isCalendlyApiConfigured } from "@/lib/calendly/client"
 import {
   captureGoogleCalendarFromSession,
+  getGoogleCalendarHealth,
   googleOAuthConfigured,
-  isGoogleCalendarConnected,
-  loadGoogleCalendarAuth,
 } from "@/lib/google/calendar"
 import TelegramBotPanel from "@/components/dashboard/TelegramBotPanel"
 import GoogleCalendarPanel from "@/components/dashboard/GoogleCalendarPanel"
@@ -62,8 +61,7 @@ export default async function DashboardPage({ searchParams }) {
   const upcoming = rest.filter(
     (a) => new Date(a.starts_at).toDateString() !== todayKey
   )
-  const googleAuth = await loadGoogleCalendarAuth()
-  const googleConnected = await isGoogleCalendarConnected()
+  const googleHealth = await getGoogleCalendarHealth()
 
   return (
     <div className="space-y-8">
@@ -89,9 +87,10 @@ export default async function DashboardPage({ searchParams }) {
 
       <GoogleCalendarPanel
         oauthReady={googleOAuthConfigured()}
-        connected={googleConnected}
-        email={googleAuth?.email || ""}
-        googleStatus={params.google || ""}
+        connected={googleHealth.connected}
+        stale={googleHealth.stale}
+        email={googleHealth.email || ""}
+        googleStatus={params.google || (googleHealth.stale ? "expired" : "")}
       />
 
       <form

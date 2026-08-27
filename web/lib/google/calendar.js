@@ -31,18 +31,25 @@ export function googleOAuthConfigured() {
   )
 }
 
-export function googleCalendarRedirectUri() {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(
-    /\/$/,
-    ""
-  )
+export function googleCalendarRedirectUri(origin) {
+  const envBase = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")
+  const vercelBase = process.env.VERCEL_URL
+    ? `https://${String(process.env.VERCEL_URL).replace(/^https?:\/\//, "")}`
+    : ""
+  const reqOrigin = origin ? String(origin).replace(/\/$/, "") : ""
+  const base =
+    (reqOrigin && !reqOrigin.includes("localhost") ? reqOrigin : "") ||
+    (envBase && !envBase.includes("localhost") ? envBase : "") ||
+    vercelBase ||
+    envBase ||
+    "http://localhost:3000"
   return `${base}/api/google/calendar/callback`
 }
 
-export function googleCalendarAuthUrl(state) {
+export function googleCalendarAuthUrl(state, origin) {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
-    redirect_uri: googleCalendarRedirectUri(),
+    redirect_uri: googleCalendarRedirectUri(origin),
     response_type: "code",
     scope: SCOPES,
     access_type: "offline",
@@ -144,16 +151,36 @@ export async function loadGoogleCalendarAuth() {
 }
 
 export async function isGoogleCalendarConnected() {
-  const auth = await loadGoogleCalendarAuth()
-  return Boolean(auth?.refresh_token)
+  const health = await getGoogleCalendarHealth()
+  return health.connected
 }
 
-export async function exchangeGoogleCode(code) {
+export async function getGoogleCalendarHealth() {
+  const auth = await loadGoogleCalendarAuth()
+  if (!auth?.refresh_token) {
+    return { connected: false, stale: false, email: null }
+  }
+  const access = await getAccessToken()
+  if (access.ok) {
+    return { connected: true, stale: false, email: auth.email || null }
+  }
+  const stale = /invalid_grant|invalid_rapt|unauthorized|expired/i.test(
+    String(access.error || "")
+  )
+  return {
+    connected: false,
+    stale,
+    email: auth.email || null,
+    error: access.error || null,
+  }
+}
+
+export async function exchangeGoogleCode(code, origin) {
   const body = new URLSearchParams({
     code,
     client_id: process.env.GOOGLE_OAUTH_CLIENT_ID,
     client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-    redirect_uri: googleCalendarRedirectUri(),
+    redirect_uri: googleCalendarRedirectUri(origin),
     grant_type: "authorization_code",
   })
   const res = await fetch(GOOGLE_TOKEN, {
@@ -200,7 +227,10 @@ async function getAccessToken() {
     return { ok: false, error: "Faltan GOOGLE_OAUTH_CLIENT_ID / SECRET" }
   }
   const refreshed = await refreshAccessToken(auth.refresh_token)
-  if (!refreshed.ok) return refreshed
+  if (!refreshed.ok) {
+    console.error("[gcal] refresh token:", refreshed.error)
+    return refreshed
+  }
   memoryAccess = {
     token: refreshed.access_token,
     expiresAt: Date.now() + (Number(refreshed.expires_in) || 3600) * 1000,
