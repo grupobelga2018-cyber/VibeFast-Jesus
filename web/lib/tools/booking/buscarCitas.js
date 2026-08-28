@@ -3,7 +3,7 @@ import { findUpcomingAppointments } from "@/lib/appointments/find"
 export const buscarCitas = {
   name: "buscar_citas",
   description:
-    "Busca citas próximas por el nombre de la clienta. Úsala al reprogramar o cancelar, después de preguntar el nombre. No adivines el nombre.",
+    "Busca citas próximas por el nombre de la clienta, incluidas las de Calendly y el dashboard. Úsala al reprogramar o cancelar, después de preguntar el nombre. No adivines el nombre.",
   parameters: {
     type: "object",
     properties: {

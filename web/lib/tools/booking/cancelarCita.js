@@ -5,7 +5,7 @@ import { cancelAppointment } from "@/lib/appointments/lifecycle"
 export const cancelarCita = {
   name: "cancelar_cita",
   description:
-    "Cancela una cita por nombre de la clienta o por id. Si no tienes el nombre, pregúntalo y usa buscar_citas.",
+    "Cancela una cita por nombre o id, incluidas las hechas en Calendly o en el dashboard. Si no tienes el nombre, pregúntalo y usa buscar_citas. No digas que hay que cancelarla a mano en Calendly: esta herramienta también la cancela ahí.",
   parameters: {
     type: "object",
     properties: {
@@ -35,12 +35,18 @@ export const cancelarCita = {
     if (!result.ok) return result
 
     await notifyGabyAppointment(result.appointment).catch(() => {})
+    const parts = ["Cita cancelada."]
+    if (result.calendlyRemoved) parts.push("También se canceló en Calendly.")
+    else if (result.calendlyError) {
+      parts.push(
+        `Calendly no se pudo cancelar (${result.calendlyError}). Hay que cancelarla también en Calendly para liberar el cupo.`
+      )
+    }
+    if (result.calendarRemoved) parts.push("Se eliminó de Google Calendar.")
     return {
       ok: true,
       appointment: result.appointment,
-      message: result.calendarRemoved
-        ? "Cita cancelada y eliminada de Google Calendar."
-        : "Cita cancelada.",
+      message: parts.join(" "),
     }
   },
 }

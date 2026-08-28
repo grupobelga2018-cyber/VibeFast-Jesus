@@ -161,6 +161,96 @@ export async function createCalendlyInvitee({
   return created
 }
 
+function foldName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+}
+
+export function calendlyScheduledEventUuid(uri) {
+  const match = String(uri || "").match(/scheduled_events\/([^/?#]+)/i)
+  return match?.[1] || null
+}
+
+async function postCalendlyCancellation(eventUuid) {
+  const canceled = await calendlyApi(
+    `/scheduled_events/${encodeURIComponent(eventUuid)}/cancellation`,
+    {
+      method: "POST",
+      body: { reason: "Cancelada por Color Hair (Telegram)" },
+    }
+  )
+  if (canceled.ok || canceled.status === 404) {
+    return { ok: true, notFound: canceled.status === 404 }
+  }
+  if (
+    canceled.status === 400 &&
+    /already|cancel/i.test(`${canceled.error || ""} ${JSON.stringify(canceled.body || {})}`)
+  ) {
+    return { ok: true }
+  }
+  return canceled
+}
+
+export async function cancelCalendlyScheduledEvent(appointment) {
+  if (!appointment?.calendly_event_uri && appointment?.channel !== "calendly") {
+    return { ok: true, skipped: true }
+  }
+  if (!isCalendlyApiConfigured()) {
+    return { ok: false, skipped: true, error: "missing_token" }
+  }
+
+  const uuid = calendlyScheduledEventUuid(appointment.calendly_event_uri)
+  if (uuid) {
+    const canceled = await postCalendlyCancellation(uuid)
+    if (canceled.ok && !canceled.notFound) return canceled
+  }
+
+  const start = new Date(appointment.starts_at)
+  if (Number.isNaN(start.getTime())) {
+    return { ok: false, error: "No se pudo cancelar en Calendly" }
+  }
+
+  const me = await getCalendlyMe()
+  if (!me.ok) return me
+  const userUri = me.resource?.uri
+  if (!userUri) return { ok: false, error: "no_calendly_user" }
+
+  const params = new URLSearchParams({
+    user: userUri,
+    min_start_time: new Date(start.getTime() - 15 * 60 * 1000).toISOString(),
+    max_start_time: new Date(start.getTime() + 15 * 60 * 1000).toISOString(),
+    status: "active",
+  })
+  const listed = await calendlyApi(`/scheduled_events?${params}`)
+  if (!listed.ok) return listed
+
+  const name = foldName(appointment.client_name)
+  let removed = 0
+  for (const event of listed.collection || []) {
+    const eventUuid = calendlyScheduledEventUuid(event.uri)
+    if (!eventUuid) continue
+    let matches = !name
+    if (name) {
+      const invitees = await calendlyApi(
+        `/scheduled_events/${encodeURIComponent(eventUuid)}/invitees`
+      )
+      matches = (invitees.collection || []).some((person) => {
+        const hay = foldName(person.name)
+        return hay.includes(name) || name.includes(hay)
+      })
+    }
+    if (!matches) continue
+    const canceled = await postCalendlyCancellation(eventUuid)
+    if (canceled.ok) removed += 1
+  }
+
+  return removed
+    ? { ok: true }
+    : { ok: false, error: "No se encontró la cita en Calendly" }
+}
+
 export async function listCalendlyAvailableTimes({
   eventTypeUri,
   start,

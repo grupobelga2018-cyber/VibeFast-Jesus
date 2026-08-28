@@ -14,12 +14,45 @@ import {
   bookCalendlyIfPossible,
   getAvailableSlots,
 } from "@/lib/appointments/availability"
+import { cancelCalendlyScheduledEvent } from "@/lib/calendly/client"
 import {
   createGoogleCalendarEvent,
   persistGoogleEventId,
   upsertGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
 } from "@/lib/google/calendar"
+
+async function removeFromExternalCalendars(appointment, { fromCalendly = false } = {}) {
+  let calendly = { ok: true, skipped: true }
+  if (
+    !fromCalendly &&
+    (appointment?.calendly_event_uri || appointment?.channel === "calendly")
+  ) {
+    try {
+      calendly = await cancelCalendlyScheduledEvent(appointment)
+    } catch (err) {
+      calendly = { ok: false, error: err.message }
+    }
+    if (!calendly.ok && !calendly.skipped) {
+      console.error("[calendly] cancel:", calendly.error)
+    }
+  }
+
+  let gcal = { ok: true, skipped: true }
+  try {
+    gcal = await deleteGoogleCalendarEvent(appointment)
+  } catch (err) {
+    gcal = { ok: false, error: err.message }
+  }
+  if (!gcal.ok && !gcal.skipped) {
+    console.error("[gcal] cancel:", gcal.error)
+  }
+  if (gcal.ok) {
+    await persistGoogleEventId(appointment.id, null)
+  }
+
+  return { calendly, gcal }
+}
 
 export function needsGabyConfirm(appointment) {
   if (!appointment) return false
@@ -116,18 +149,21 @@ export async function rejectAppointment(id, { reschedule = false } = {}) {
     .single()
 
   if (updErr) return { ok: false, error: updErr.message }
-  const gcal = await deleteGoogleCalendarEvent(data)
-  if (!gcal.ok && !gcal.skipped) {
-    console.error("[gcal] reject:", gcal.error)
-  }
-  if (gcal.ok) {
-    await persistGoogleEventId(data.id, null)
-  }
+  const { calendly, gcal } = await removeFromExternalCalendars(data)
   await sendSlotUnavailable(data).catch(() => {})
-  return { ok: true, appointment: data, rescheduled: false }
+  return {
+    ok: true,
+    appointment: data,
+    rescheduled: false,
+    calendarRemoved: Boolean(gcal.ok && !gcal.skipped),
+    calendlyRemoved: Boolean(calendly.ok && !calendly.skipped),
+  }
 }
 
-export async function cancelAppointment(id, { notifyClient = true } = {}) {
+export async function cancelAppointment(
+  id,
+  { notifyClient = true, fromCalendly = false } = {}
+) {
   const supabase = createAdminClient()
   const { data: current, error } = await supabase
     .from("appointments")
@@ -149,13 +185,9 @@ export async function cancelAppointment(id, { notifyClient = true } = {}) {
     data = updated.data
   }
 
-  const gcal = await deleteGoogleCalendarEvent(current)
-  if (!gcal.ok && !gcal.skipped) {
-    console.error("[gcal] cancel:", gcal.error)
-  }
-  if (gcal.ok) {
-    await persistGoogleEventId(data.id, null)
-  }
+  const { calendly, gcal } = await removeFromExternalCalendars(current, {
+    fromCalendly,
+  })
 
   if (notifyClient && data.client_telegram_id) {
     await sendTelegramMessage(
@@ -168,6 +200,8 @@ export async function cancelAppointment(id, { notifyClient = true } = {}) {
     ok: true,
     appointment: data,
     calendarRemoved: Boolean(gcal.ok && !gcal.skipped),
+    calendlyRemoved: Boolean(calendly.ok && !calendly.skipped),
+    calendlyError: calendly.ok || calendly.skipped ? null : calendly.error,
   }
 }
 

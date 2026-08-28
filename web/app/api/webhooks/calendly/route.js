@@ -1,9 +1,15 @@
 import { createHmac, timingSafeEqual } from "crypto"
-import { NextResponse } from "next/server"
+import { NextResponse, after } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { endsAtFromStart } from "@/lib/appointments/helpers"
+import { sendAppointmentConfirmation } from "@/lib/appointments/notify"
 import { notifyGabyAppointment } from "@/lib/telegram/notify"
 import { cancelAppointment } from "@/lib/appointments/lifecycle"
+import { calendlyScheduledEventUuid } from "@/lib/calendly/client"
+import {
+  createGoogleCalendarEvent,
+  persistGoogleEventId,
+} from "@/lib/google/calendar"
 import config from "@/config"
 
 export const runtime = "nodejs"
@@ -33,9 +39,31 @@ function verifyCalendlySignature(rawBody, signatureHeader) {
   }
 }
 
+function inviteeDisplayName(invitee = {}) {
+  return (
+    invitee.name ||
+    [invitee.first_name, invitee.last_name].filter(Boolean).join(" ") ||
+    invitee.invitee?.name ||
+    [invitee.invitee?.first_name, invitee.invitee?.last_name]
+      .filter(Boolean)
+      .join(" ") ||
+    null
+  )
+}
+
+function scheduledEventUri(invitee = {}, scheduled = {}) {
+  const uuid =
+    calendlyScheduledEventUuid(scheduled.uri) ||
+    calendlyScheduledEventUuid(invitee.uri) ||
+    calendlyScheduledEventUuid(invitee.event)
+  return uuid ? `https://api.calendly.com/scheduled_events/${uuid}` : null
+}
+
 function guessServiceSlug(eventName = "") {
   const lower = eventName.toLowerCase()
-  const match = config.services.find((s) => lower.includes(s.slug) || lower.includes(s.name.toLowerCase()))
+  const match = config.services.find(
+    (s) => lower.includes(s.slug) || lower.includes(s.name.toLowerCase())
+  )
   return match?.slug || "corte"
 }
 
@@ -57,7 +85,7 @@ export async function POST(request) {
   const event = payload.event
   const invitee = payload.payload || {}
   const scheduled = invitee.scheduled_event || {}
-  const eventUri = scheduled.uri || invitee.uri || null
+  const eventUri = scheduledEventUri(invitee, scheduled)
 
   const supabase = createAdminClient()
 
@@ -69,7 +97,7 @@ export async function POST(request) {
 
     const serviceSlug = guessServiceSlug(scheduled.name || invitee.event_type?.name || "")
     const row = {
-      client_name: invitee.name || invitee.invitee?.name || null,
+      client_name: inviteeDisplayName(invitee),
       client_email: invitee.email || invitee.invitee?.email || null,
       client_phone:
         invitee.text_reminder_number ||
@@ -99,6 +127,17 @@ export async function POST(request) {
 
     await notifyGabyAppointment(data).catch(() => {})
     await sendAppointmentConfirmation(data).catch(() => {})
+    after(() => {
+      createGoogleCalendarEvent(data)
+        .then(async (gcal) => {
+          if (gcal.ok && gcal.eventId) {
+            await persistGoogleEventId(data.id, gcal.eventId)
+          }
+        })
+        .catch((err) => {
+          console.warn("[calendly] google sync:", err.message)
+        })
+    })
     return NextResponse.json({ ok: true, id: data.id })
   }
 
@@ -115,8 +154,23 @@ export async function POST(request) {
       console.error("[calendly] cancel find:", findErr.message)
       return NextResponse.json({ error: findErr.message }, { status: 500 })
     }
-    if (row?.id) {
-      const result = await cancelAppointment(row.id, { notifyClient: true })
+    let appointmentId = row?.id
+    if (!appointmentId) {
+      const uuid = calendlyScheduledEventUuid(eventUri)
+      if (uuid) {
+        const { data: fuzzy } = await supabase
+          .from("appointments")
+          .select("id")
+          .ilike("calendly_event_uri", `%${uuid}%`)
+          .maybeSingle()
+        appointmentId = fuzzy?.id
+      }
+    }
+    if (appointmentId) {
+      const result = await cancelAppointment(appointmentId, {
+        notifyClient: true,
+        fromCalendly: true,
+      })
       if (!result.ok) {
         console.error("[calendly] cancel:", result.error)
         return NextResponse.json({ error: result.error }, { status: 500 })
