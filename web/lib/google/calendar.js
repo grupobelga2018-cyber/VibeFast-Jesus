@@ -6,6 +6,7 @@ import {
   endsAtFromStart,
   getService,
   zonedParts,
+  cleanClientName,
 } from "@/lib/appointments/helpers"
 import { GOOGLE_CALENDAR_SCOPES } from "@/lib/google/scopes"
 
@@ -314,8 +315,9 @@ function eventPayload(appointment) {
     ? new Date(appointment.ends_at)
     : endsAtFromStart(start, appointment.service_slug)
   const tz = config.booking.timezone
+  const clientName = cleanClientName(appointment.client_name) || "Clienta"
   return {
-    summary: `${service?.name || appointment.service_slug} · ${appointment.client_name || "Clienta"}`,
+    summary: `${service?.name || appointment.service_slug} · ${clientName}`,
     description: [
       `Cita de ${config.app.name}`,
       appointment.client_phone ? `Tel: ${appointment.client_phone}` : null,
@@ -381,7 +383,18 @@ export async function createGoogleCalendarEvent(appointment) {
       console.warn("[gcal] precheck:", err.message)
     }
   }
-  return calendarRequest("POST", "/events", eventPayload(appointment))
+
+  const payload = eventPayload(appointment)
+  const calendlyEvent = await findCalendlyHostTitledEvent(appointment)
+  if (calendlyEvent?.id) {
+    const patched = await calendarRequest(
+      "PATCH",
+      `/events/${encodeURIComponent(calendlyEvent.id)}`,
+      payload
+    )
+    if (patched.ok) return patched
+  }
+  return calendarRequest("POST", "/events", payload)
 }
 
 export async function updateGoogleCalendarEvent(appointment) {
@@ -439,6 +452,20 @@ export async function deleteGoogleCalendarEvent(appointment) {
 }
 
 async function findMatchingCalendarEvents(appointment) {
+  const items = await listCalendarEventsNear(appointment)
+  const name = cleanClientName(appointment.client_name).toLowerCase()
+  if (!name) return items
+  return items.filter((event) => {
+    const summary = String(event.summary || "").toLowerCase()
+    return summary.includes(name) || isCalendlyHostTitle(event.summary)
+  })
+}
+
+function isCalendlyHostTitle(summary) {
+  return /\s+(?:and|y|&)\s+jes[uú]s\s+beltr[aá]n\s*$/i.test(String(summary || ""))
+}
+
+async function listCalendarEventsNear(appointment) {
   const start = new Date(appointment?.starts_at)
   if (Number.isNaN(start.getTime())) return []
   const timeMin = new Date(start.getTime() - 10 * 60 * 1000).toISOString()
@@ -450,11 +477,29 @@ async function findMatchingCalendarEvents(appointment) {
     maxResults: "15",
   })
   const listed = await calendarRequest("GET", `/events?${qs}`)
-  const items = listed.json?.items || []
-  const name = String(appointment.client_name || "").trim().toLowerCase()
-  if (!name) return items
-  return items.filter((event) =>
-    String(event.summary || "").toLowerCase().includes(name)
+  return listed.json?.items || []
+}
+
+async function findCalendlyHostTitledEvent(appointment) {
+  const items = await listCalendarEventsNear(appointment)
+  const name = cleanClientName(appointment.client_name).toLowerCase()
+  return (
+    items.find((event) => isCalendlyHostTitle(event.summary)) ||
+    items.find((event) => {
+      const summary = String(event.summary || "").toLowerCase()
+      return name && summary.includes(name) && / and | y /.test(summary)
+    }) ||
+    null
+  )
+}
+
+export async function retitleCalendlyGoogleEvent(appointment) {
+  const event = await findCalendlyHostTitledEvent(appointment)
+  if (!event?.id) return { ok: true, skipped: true }
+  return calendarRequest(
+    "PATCH",
+    `/events/${encodeURIComponent(event.id)}`,
+    eventPayload(appointment)
   )
 }
 
@@ -505,6 +550,17 @@ export async function syncOpenAppointmentsToGoogle() {
         await persistGoogleEventId(row.id, null)
         removed += 1
       }
+    }
+
+    const { data: calendlyRows } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("channel", "calendly")
+      .neq("status", "cancelled")
+      .gte("starts_at", new Date().toISOString())
+      .limit(25)
+    for (const row of calendlyRows || []) {
+      await retitleCalendlyGoogleEvent(row).catch(() => {})
     }
 
     return { ok: true, synced, removed }

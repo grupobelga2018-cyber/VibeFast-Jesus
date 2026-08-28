@@ -16,6 +16,27 @@ export function endsAtFromStart(startsAt, serviceSlug) {
 
 export const SALON_TZ = config.booking.timezone || "America/Mexico_City"
 
+const HOST_NAME_ALIASES = [
+  "Jesus Beltran",
+  "Jesús Beltrán",
+  "Jesus Beltrán",
+  "Jesús Beltran",
+  "Color Hair by Gabby",
+]
+
+export function cleanClientName(name) {
+  let cleaned = String(name || "").replace(/\s+/g, " ").trim()
+  if (!cleaned) return ""
+  for (const host of HOST_NAME_ALIASES) {
+    const escaped = host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")
+    cleaned = cleaned.replace(
+      new RegExp(`\\s+(?:and|y|&)\\s+${escaped}\\s*$`, "i"),
+      ""
+    )
+  }
+  return cleaned.trim()
+}
+
 export function zonedParts(date, timeZone = SALON_TZ) {
   const map = {}
   for (const part of new Intl.DateTimeFormat("en-CA", {
