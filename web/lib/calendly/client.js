@@ -256,18 +256,34 @@ export async function listCalendlyAvailableTimes({
   start,
   end,
 }) {
-  const params = new URLSearchParams({
-    event_type: eventTypeUri,
-    start_time: start.toISOString(),
-    end_time: end.toISOString(),
-  })
-  const res = await calendlyApi(`/event_type_available_times?${params}`)
-  if (!res.ok) return res
-  const collection = Array.isArray(res.collection) ? res.collection : []
-  return {
-    ok: true,
-    times: collection
-      .filter((slot) => slot.status === "available" && slot.start_time)
-      .map((slot) => new Date(slot.start_time)),
+  const times = []
+  let cursor = new Date(start)
+  const endMs = new Date(end).getTime()
+  let anyOk = false
+
+  while (cursor.getTime() < endMs) {
+    const chunkEnd = new Date(
+      Math.min(cursor.getTime() + 6 * 24 * 60 * 60 * 1000, endMs)
+    )
+    if (chunkEnd.getTime() <= cursor.getTime()) break
+    const params = new URLSearchParams({
+      event_type: eventTypeUri,
+      start_time: cursor.toISOString(),
+      end_time: chunkEnd.toISOString(),
+    })
+    const res = await calendlyApi(`/event_type_available_times?${params}`)
+    if (res.ok) {
+      anyOk = true
+      const collection = Array.isArray(res.collection) ? res.collection : []
+      times.push(
+        ...collection
+          .filter((slot) => slot.status === "available" && slot.start_time)
+          .map((slot) => new Date(slot.start_time))
+      )
+    }
+    cursor = chunkEnd
   }
+
+  if (!anyOk) return { ok: false, error: "No se pudieron leer horarios de Calendly" }
+  return { ok: true, times }
 }

@@ -20,6 +20,7 @@ function buildSystemPrompt(chatId, draft = {}) {
   return `Eres el asistente de ${config.app.name}. Hablas en español, cálida y clara.
 
 Hoy es ${cal.nowLabel}. Fecha ISO de hoy: ${cal.todayIso}. Zona: ${config.booking.timezone}.
+El salón abre lunes a sábado de 10:00 a 18:00. Domingo cerrado. Si piden sábado, llama listar_disponibilidad; no digas que no hay sábado.
 
 Calendario real (no lo contradigas):
 ${cal.upcoming}

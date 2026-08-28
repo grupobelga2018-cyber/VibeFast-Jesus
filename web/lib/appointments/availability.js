@@ -103,6 +103,9 @@ export async function getAvailableSlots({
   let source = "local"
   let slots = []
 
+  const busy = await loadLocalBusy(from, to)
+  const localSlots = buildLocalSlots({ from, to, service, busy, limit: 80 })
+
   if (isCalendlyApiConfigured()) {
     const eventType = await resolveCalendlyEventType(service)
     if (eventType.ok) {
@@ -113,14 +116,23 @@ export async function getAvailableSlots({
       })
       if (cal.ok) {
         source = "calendly"
-        slots = cal.times.slice(0, 24).map((d) => toSlot(d, service.slug))
+        slots = cal.times.map((d) => toSlot(d, service.slug))
       }
     }
   }
 
   if (source === "local") {
-    const busy = await loadLocalBusy(from, to)
-    slots = buildLocalSlots({ from, to, service, busy, limit: 40 })
+    slots = localSlots
+  } else {
+    const seen = new Set(slots.map((s) => salonSlotKey(s.starts_at)))
+    for (const slot of localSlots) {
+      if (seen.has(salonSlotKey(slot.starts_at))) continue
+      seen.add(salonSlotKey(slot.starts_at))
+      slots.push(slot)
+    }
+    slots.sort(
+      (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
+    )
   }
 
   const requestedParts = requested ? zonedParts(requested) : null
@@ -169,7 +181,7 @@ export async function getAvailableSlots({
     slots,
     note:
       source === "calendly"
-        ? "Horarios tomados de Calendly. Si elige uno, se agenda en ese calendario."
+        ? "Horarios de Calendly más el salón (10:00–18:00, lunes a sábado, hora Ciudad de México)."
         : "Horarios del salón (10:00–18:00, lunes a sábado, hora Ciudad de México).",
   }
 }
