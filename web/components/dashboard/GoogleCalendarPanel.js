@@ -58,7 +58,8 @@ export default function GoogleCalendarPanel({
             Google Calendar
           </p>
           <p className="mt-1 text-sm text-base-content/70">
-            Las citas del bot y del dashboard se crean en el calendario de Gaby.
+            Las citas del bot y del dashboard se crean en el calendario del salón.
+            Si ves “Jesus Beltran” en la agenda, pulsa <b>Volver a conectar</b> y acepta el permiso de Calendar.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -105,7 +106,19 @@ export default function GoogleCalendarPanel({
       )}
       {!blockedByEnv && !connected && (
         <ol className="mt-3 list-decimal space-y-1 pl-4 text-sm text-base-content/70">
-          <li>Pulsa Conectar y acepta el permiso con la cuenta de Gaby.</li>
+          <li>Pulsa Conectar y acepta el permiso con la cuenta del salón.</li>
+        </ol>
+      )}
+      {!blockedByEnv && connected && (
+        <ol className="mt-3 list-decimal space-y-1 pl-4 text-sm text-base-content/70">
+          <li>
+            En Calendly: tipo de evento → More options → Notifications → Calendar
+            invitation → título: <code>invitee_full_name</code> (sin my_name).
+          </li>
+          <li>
+            En Calendly → Calendar connections, el calendario debe ser el de{" "}
+            {email || "grupobelga2018@gmail.com"}.
+          </li>
         </ol>
       )}
     </section>

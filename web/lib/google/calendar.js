@@ -332,14 +332,12 @@ function eventPayload(appointment) {
   }
 }
 
-async function calendarRequest(method, pathname, body) {
+async function googleFetch(path, { method = "GET", body } = {}) {
   const access = await getAccessToken()
   if (!access.ok) return access
-  const auth = await loadGoogleCalendarAuth()
-  const calId = encodeURIComponent(auth?.calendar_id || calendarId())
   const headers = { Authorization: `Bearer ${access.token}` }
   if (body) headers["Content-Type"] = "application/json"
-  const res = await fetch(`${CALENDAR_API}/calendars/${calId}${pathname}`, {
+  const res = await fetch(`${CALENDAR_API}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -355,10 +353,58 @@ async function calendarRequest(method, pathname, body) {
   }
   if (!res.ok) {
     const message = json.error?.message || res.statusText
-    console.error(`[gcal] ${method} ${pathname}:`, message)
+    console.error(`[gcal] ${method} ${path}:`, message)
     return { ok: false, error: message, status: res.status, json }
   }
   return { ok: true, eventId: json.id, htmlLink: json.htmlLink, json }
+}
+
+async function calendarRequest(method, pathname, body, explicitCalId) {
+  const auth = await loadGoogleCalendarAuth()
+  const calId = encodeURIComponent(
+    explicitCalId || auth?.calendar_id || calendarId()
+  )
+  return googleFetch(`/calendars/${calId}${pathname}`, { method, body })
+}
+
+let calendarIdsCache = { at: 0, ids: null }
+
+async function listWritableCalendarIds() {
+  if (calendarIdsCache.ids && Date.now() - calendarIdsCache.at < 60_000) {
+    return calendarIdsCache.ids
+  }
+  const listed = await googleFetch("/users/me/calendarList")
+  const ids = (listed.json?.items || [])
+    .filter((cal) => cal.accessRole === "owner" || cal.accessRole === "writer")
+    .map((cal) => cal.id)
+    .filter(Boolean)
+  const fallback = [calendarId()]
+  const unique = [...new Set(ids.length ? ids : fallback)]
+  calendarIdsCache = { at: Date.now(), ids: unique }
+  return unique
+}
+
+export async function hideHostCalendarNames() {
+  const listed = await googleFetch("/users/me/calendarList")
+  if (!listed.ok) return listed
+  const salon = config.app.name
+  for (const cal of listed.json?.items || []) {
+    const label = `${cal.summaryOverride || ""} ${cal.summary || ""}`
+    if (!mentionsCalendarHost(label) && !/^jes[uú]s\b/i.test(String(cal.summary || "").trim())) {
+      continue
+    }
+    await googleFetch(`/users/me/calendarList/${encodeURIComponent(cal.id)}`, {
+      method: "PATCH",
+      body: { summaryOverride: salon },
+    })
+    if (cal.primary || cal.accessRole === "owner") {
+      await googleFetch(`/calendars/${encodeURIComponent(cal.id)}`, {
+        method: "PATCH",
+        body: { summary: salon },
+      })
+    }
+  }
+  return { ok: true }
 }
 
 export async function createGoogleCalendarEvent(appointment) {
@@ -429,7 +475,9 @@ export async function deleteGoogleCalendarEvent(appointment) {
     if (event.id === appointment?.google_event_id && removedById) continue
     const deleted = await calendarRequest(
       "DELETE",
-      `/events/${encodeURIComponent(event.id)}`
+      `/events/${encodeURIComponent(event.id)}?sendUpdates=none`,
+      undefined,
+      event.calendarId
     )
     if (deleted.ok || deleted.status === 404 || deleted.status === 410) {
       removed += 1
@@ -477,30 +525,39 @@ async function listCalendarEventsNear(appointment) {
     singleEvents: "true",
     maxResults: "50",
   })
-  const listed = await calendarRequest("GET", `/events?${qs}`)
-  return listed.json?.items || []
+  const ids = await listWritableCalendarIds()
+  const items = []
+  for (const id of ids) {
+    const listed = await calendarRequest("GET", `/events?${qs}`, undefined, id)
+    for (const event of listed.json?.items || []) {
+      items.push({ ...event, calendarId: id })
+    }
+  }
+  return items
 }
 
 export async function scrubHostNameFromCalendar(appointment, keepEventId = null) {
+  await hideHostCalendarNames().catch(() => {})
   const payload = eventPayload(appointment)
   const items = await listCalendarEventsNear(appointment)
   let kept = keepEventId
   for (const event of items) {
     if (!event?.id || !eventMentionsHost(event)) continue
+    const path = `/events/${encodeURIComponent(event.id)}?sendUpdates=none`
     if (!kept || event.id === kept) {
-      const path = `/events/${encodeURIComponent(event.id)}?sendUpdates=none`
-      let patched = await calendarRequest("PATCH", path, {
-        ...payload,
-        attendees: [],
-      })
-      if (!patched.ok) patched = await calendarRequest("PATCH", path, payload)
+      let patched = await calendarRequest(
+        "PATCH",
+        path,
+        { ...payload, attendees: [] },
+        event.calendarId
+      )
+      if (!patched.ok) {
+        patched = await calendarRequest("PATCH", path, payload, event.calendarId)
+      }
       if (patched.ok) kept = event.id
       continue
     }
-    await calendarRequest(
-      "DELETE",
-      `/events/${encodeURIComponent(event.id)}?sendUpdates=none`
-    )
+    await calendarRequest("DELETE", path, undefined, event.calendarId)
   }
   return { ok: true, eventId: kept || null, skipped: !kept }
 }
@@ -528,6 +585,9 @@ export async function syncOpenAppointmentsToGoogle() {
     }
 
     let synced = 0
+    await hideHostCalendarNames().catch((err) => {
+      console.warn("[gcal] rename calendars:", err.message)
+    })
     for (const row of data || []) {
       const created = await createGoogleCalendarEvent(row)
       if (created.ok && !created.skipped && created.eventId) {

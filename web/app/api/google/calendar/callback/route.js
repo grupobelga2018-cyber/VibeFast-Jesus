@@ -6,6 +6,7 @@ import {
   fetchGoogleEmail,
   saveGoogleCalendarAuth,
   syncOpenAppointmentsToGoogle,
+  hideHostCalendarNames,
 } from "@/lib/google/calendar"
 
 export const runtime = "nodejs"
@@ -52,6 +53,9 @@ export async function GET(request) {
     email,
   })
 
+  await hideHostCalendarNames().catch((err) => {
+    console.warn("[gcal] rename calendars:", err.message)
+  })
   await syncOpenAppointmentsToGoogle().catch((err) => {
     console.warn("[gcal] backfill:", err.message)
   })
