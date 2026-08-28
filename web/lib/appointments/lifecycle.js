@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { endsAtFromStart, parseSalonDateTime } from "@/lib/appointments/helpers"
 import { resolveOpenAppointment } from "@/lib/appointments/find"
 import { notifyGabyAppointment } from "@/lib/telegram/notify"
+import { sendTelegramMessage } from "@/lib/telegram/client"
 import {
   sendAppointmentConfirmation,
   sendRescheduleRejected,
@@ -115,9 +116,57 @@ export async function rejectAppointment(id, { reschedule = false } = {}) {
     .single()
 
   if (updErr) return { ok: false, error: updErr.message }
-  await deleteGoogleCalendarEvent(data).catch(() => {})
+  const gcal = await deleteGoogleCalendarEvent(data)
+  if (!gcal.ok && !gcal.skipped) {
+    console.error("[gcal] reject:", gcal.error)
+  }
+  await persistGoogleEventId(data.id, null)
   await sendSlotUnavailable(data).catch(() => {})
   return { ok: true, appointment: data, rescheduled: false }
+}
+
+export async function cancelAppointment(id, { notifyClient = true } = {}) {
+  const supabase = createAdminClient()
+  const { data: current, error } = await supabase
+    .from("appointments")
+    .select("*")
+    .eq("id", id)
+    .single()
+
+  if (error || !current) return { ok: false, error: "Cita no encontrada" }
+
+  let data = current
+  if (current.status !== "cancelled") {
+    const updated = await supabase
+      .from("appointments")
+      .update({ status: "cancelled", proposed_starts_at: null })
+      .eq("id", id)
+      .select()
+      .single()
+    if (updated.error) return { ok: false, error: updated.error.message }
+    data = updated.data
+  }
+
+  const gcal = await deleteGoogleCalendarEvent(current)
+  if (!gcal.ok && !gcal.skipped) {
+    console.error("[gcal] cancel:", gcal.error)
+  }
+  if (current.google_event_id) {
+    await persistGoogleEventId(data.id, null)
+  }
+
+  if (notifyClient && data.client_telegram_id) {
+    await sendTelegramMessage(
+      data.client_telegram_id,
+      "Tu cita fue cancelada. Cuando quieras, coordinamos otra por Telegram."
+    ).catch(() => {})
+  }
+
+  return {
+    ok: true,
+    appointment: data,
+    calendarRemoved: Boolean(current.google_event_id && gcal.ok),
+  }
 }
 
 export async function requestTelegramBooking(payload) {

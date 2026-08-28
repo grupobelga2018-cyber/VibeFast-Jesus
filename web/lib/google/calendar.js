@@ -334,15 +334,22 @@ async function calendarRequest(method, pathname, body) {
   if (!access.ok) return access
   const auth = await loadGoogleCalendarAuth()
   const calId = encodeURIComponent(auth?.calendar_id || calendarId())
+  const headers = { Authorization: `Bearer ${access.token}` }
+  if (body) headers["Content-Type"] = "application/json"
   const res = await fetch(`${CALENDAR_API}/calendars/${calId}${pathname}`, {
     method,
-    headers: {
-      Authorization: `Bearer ${access.token}`,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   })
-  const json = await res.json().catch(() => ({}))
+  const text = await res.text()
+  let json = {}
+  if (text) {
+    try {
+      json = JSON.parse(text)
+    } catch {
+      json = {}
+    }
+  }
   if (!res.ok) {
     const message = json.error?.message || res.statusText
     console.error(`[gcal] ${method} ${pathname}:`, message)
@@ -357,9 +364,15 @@ export async function createGoogleCalendarEvent(appointment) {
       const supabase = createAdminClient()
       const { data } = await supabase
         .from("appointments")
-        .select("google_event_id")
+        .select("google_event_id,status")
         .eq("id", appointment.id)
         .maybeSingle()
+      if (data?.status === "cancelled") {
+        if (data.google_event_id) {
+          await deleteGoogleCalendarEvent({ google_event_id: data.google_event_id })
+        }
+        return { ok: true, skipped: true }
+      }
       if (data?.google_event_id) {
         return { ok: true, eventId: data.google_event_id, skipped: true }
       }
@@ -436,12 +449,12 @@ export async function syncOpenAppointmentsToGoogle() {
 }
 
 export async function persistGoogleEventId(appointmentId, eventId) {
-  if (!appointmentId || !eventId) return
+  if (!appointmentId) return
   try {
     const supabase = createAdminClient()
     const { error } = await supabase
       .from("appointments")
-      .update({ google_event_id: eventId })
+      .update({ google_event_id: eventId || null })
       .eq("id", appointmentId)
     if (error) console.warn("[gcal] persist id:", error.message)
   } catch (err) {

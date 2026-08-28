@@ -1,8 +1,6 @@
-import { createAdminClient } from "@/lib/supabase/admin"
 import { resolveOpenAppointment } from "@/lib/appointments/find"
 import { notifyGabyAppointment } from "@/lib/telegram/notify"
-import { sendTelegramMessage } from "@/lib/telegram/client"
-import { deleteGoogleCalendarEvent } from "@/lib/google/calendar"
+import { cancelAppointment } from "@/lib/appointments/lifecycle"
 
 export const cancelarCita = {
   name: "cancelar_cita",
@@ -31,25 +29,18 @@ export const cancelarCita = {
     const found = await resolveOpenAppointment({ appointment_id, client_name })
     if (!found.ok) return found
 
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from("appointments")
-      .update({ status: "cancelled", proposed_starts_at: null })
-      .eq("id", found.appointment.appointment_id)
-      .select()
-      .single()
+    const result = await cancelAppointment(found.appointment.appointment_id, {
+      notifyClient: true,
+    })
+    if (!result.ok) return result
 
-    if (error) return { ok: false, error: error.message }
-
-    await deleteGoogleCalendarEvent(data).catch(() => {})
-    await notifyGabyAppointment(data).catch(() => {})
-    if (data.client_telegram_id) {
-      await sendTelegramMessage(
-        data.client_telegram_id,
-        "Tu cita fue cancelada. Cuando quieras, coordinamos otra por este chat."
-      ).catch(() => {})
+    await notifyGabyAppointment(result.appointment).catch(() => {})
+    return {
+      ok: true,
+      appointment: result.appointment,
+      message: result.calendarRemoved
+        ? "Cita cancelada y eliminada de Google Calendar."
+        : "Cita cancelada.",
     }
-
-    return { ok: true, appointment: data }
   },
 }

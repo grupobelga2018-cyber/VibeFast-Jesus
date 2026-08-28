@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { endsAtFromStart } from "@/lib/appointments/helpers"
 import { notifyGabyAppointment } from "@/lib/telegram/notify"
-import { sendAppointmentConfirmation } from "@/lib/appointments/notify"
+import { cancelAppointment } from "@/lib/appointments/lifecycle"
 import config from "@/config"
 
 export const runtime = "nodejs"
@@ -106,14 +106,21 @@ export async function POST(request) {
     if (!eventUri) {
       return NextResponse.json({ ok: true, skipped: true })
     }
-    const { error } = await supabase
+    const { data: row, error: findErr } = await supabase
       .from("appointments")
-      .update({ status: "cancelled" })
+      .select("id")
       .eq("calendly_event_uri", eventUri)
-
-    if (error) {
-      console.error("[calendly] cancel:", error.message)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      .maybeSingle()
+    if (findErr) {
+      console.error("[calendly] cancel find:", findErr.message)
+      return NextResponse.json({ error: findErr.message }, { status: 500 })
+    }
+    if (row?.id) {
+      const result = await cancelAppointment(row.id, { notifyClient: true })
+      if (!result.ok) {
+        console.error("[calendly] cancel:", result.error)
+        return NextResponse.json({ error: result.error }, { status: 500 })
+      }
     }
     return NextResponse.json({ ok: true })
   }

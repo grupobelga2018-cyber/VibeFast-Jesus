@@ -6,6 +6,7 @@ import { endsAtFromStart, parseSalonDateTime } from "@/lib/appointments/helpers"
 import {
   confirmAppointment,
   rejectAppointment,
+  cancelAppointment,
   pushAppointmentToCalendly,
   pushAppointmentToGoogle,
 } from "@/lib/appointments/lifecycle"
@@ -113,6 +114,13 @@ export async function updateAppointmentStatus(formData) {
     return
   }
 
+  if (status === "cancelled") {
+    const result = await cancelAppointment(id, { notifyClient: true })
+    if (!result.ok) console.error("[appointments] cancel:", result.error)
+    revalidatePath("/dashboard")
+    return
+  }
+
   const { data, error } = await supabase
     .from("appointments")
     .update({ status })
@@ -123,13 +131,6 @@ export async function updateAppointmentStatus(formData) {
   if (error) {
     console.error("[appointments] status:", error.message)
     return
-  }
-
-  if (status === "cancelled" && data.client_telegram_id) {
-    await sendTelegramMessage(
-      data.client_telegram_id,
-      "Tu cita fue cancelada. Cuando quieras, coordinamos otra por Telegram."
-    ).catch(() => {})
   }
 
   revalidatePath("/dashboard")
