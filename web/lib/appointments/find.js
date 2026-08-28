@@ -1,24 +1,15 @@
 import { createAdminClient } from "@/lib/supabase/admin"
-import { formatAppointmentWhen, getService } from "@/lib/appointments/helpers"
+import {
+  formatAppointmentWhen,
+  getService,
+  namesMatch,
+  guessServiceSlugFromText,
+  endsAtFromStart,
+  cleanClientName,
+} from "@/lib/appointments/helpers"
+import { findCalendlyBookingsByName } from "@/lib/calendly/client"
 
 const OPEN_STATUSES = ["pending", "confirmed", "rescheduled"]
-
-function foldName(value) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-}
-
-function namesMatch(haystack, needle) {
-  const hay = foldName(haystack)
-  const want = foldName(needle)
-  if (!hay || !want) return false
-  if (hay.includes(want) || want.includes(hay)) return true
-  const hayParts = hay.split(/\s+/).filter(Boolean)
-  const wantParts = want.split(/\s+/).filter(Boolean)
-  return wantParts.every((part) => hayParts.some((h) => h.startsWith(part) || part.startsWith(h)))
-}
 
 function summarize(row) {
   const service = getService(row.service_slug)
@@ -36,6 +27,39 @@ function summarize(row) {
       ? formatAppointmentWhen(row.proposed_starts_at)
       : null,
   }
+}
+
+async function importCalendlyByName(name) {
+  const found = await findCalendlyBookingsByName(name)
+  if (!found.bookings?.length) return []
+
+  const supabase = createAdminClient()
+  const imported = []
+  for (const booking of found.bookings) {
+    const serviceSlug = guessServiceSlugFromText(booking.event_name)
+    const { data, error } = await supabase
+      .from("appointments")
+      .upsert(
+        {
+          client_name: cleanClientName(booking.client_name) || name,
+          client_email: booking.client_email,
+          service_slug: serviceSlug,
+          starts_at: booking.starts_at,
+          ends_at:
+            booking.ends_at ||
+            endsAtFromStart(booking.starts_at, serviceSlug).toISOString(),
+          channel: "calendly",
+          status: "confirmed",
+          calendly_event_uri: booking.calendly_event_uri,
+        },
+        { onConflict: "calendly_event_uri" }
+      )
+      .select()
+      .single()
+    if (error) console.warn("[calendly] import:", error.message)
+    else if (data) imported.push(data)
+  }
+  return imported
 }
 
 export async function findUpcomingAppointments({
@@ -74,16 +98,20 @@ export async function findUpcomingAppointments({
     .in("status", OPEN_STATUSES)
     .gte("starts_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
     .order("starts_at", { ascending: true })
-    .limit(40)
+    .limit(100)
 
   if (error) return { ok: false, error: error.message, appointments: [] }
 
+  let matched = (data || []).filter((row) => namesMatch(row.client_name, name))
+  if (!matched.length) {
+    const imported = await importCalendlyByName(name)
+    matched = imported.filter((row) => namesMatch(row.client_name, name) || namesMatch(name, row.client_name))
+    if (!matched.length) matched = imported
+  }
+
   return {
     ok: true,
-    appointments: (data || [])
-      .filter((row) => namesMatch(row.client_name, name))
-      .slice(0, 10)
-      .map(summarize),
+    appointments: matched.slice(0, 10).map(summarize),
   }
 }
 
@@ -98,7 +126,7 @@ export async function resolveOpenAppointment({
     return {
       ok: false,
       error: "no_encontrada",
-      message: `No encontré una cita a nombre de ${client_name}. Confirma el nombre.`,
+      message: `No encontré una cita a nombre de ${client_name} (tampoco en Calendly). Confirma el nombre.`,
       appointments: [],
     }
   }

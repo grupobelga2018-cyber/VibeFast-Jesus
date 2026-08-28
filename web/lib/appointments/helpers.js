@@ -24,6 +24,33 @@ const HOST_NAME_ALIASES = [
   "Color Hair by Gabby",
 ]
 
+export function foldName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+}
+
+export function namesMatch(haystack, needle) {
+  const hay = foldName(haystack)
+  const want = foldName(needle)
+  if (!hay || !want) return false
+  if (hay.includes(want) || want.includes(hay)) return true
+  const hayParts = hay.split(/\s+/).filter(Boolean)
+  const wantParts = want.split(/\s+/).filter(Boolean)
+  return wantParts.every((part) =>
+    hayParts.some((h) => h.startsWith(part) || part.startsWith(h))
+  )
+}
+
+export function guessServiceSlugFromText(eventName = "") {
+  const lower = foldName(eventName)
+  const match = config.services.find(
+    (s) => lower.includes(foldName(s.slug)) || lower.includes(foldName(s.name))
+  )
+  return match?.slug || "corte"
+}
+
 export function mentionsCalendarHost(text) {
   return /jes[uú]s\s+beltr[aá]n/i.test(String(text || ""))
 }

@@ -1,3 +1,5 @@
+import { cleanClientName, namesMatch } from "@/lib/appointments/helpers"
+
 const CALENDLY_API = "https://api.calendly.com"
 
 let cachedMe = null
@@ -15,7 +17,10 @@ export async function calendlyApi(path, { method = "GET", body } = {}) {
   const token = getCalendlyToken()
   if (!token) return { ok: false, error: "missing_token" }
 
-  const res = await fetch(`${CALENDLY_API}${path}`, {
+  const url = String(path || "").startsWith("http")
+    ? path
+    : `${CALENDLY_API}${path}`
+  const res = await fetch(url, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -161,13 +166,6 @@ export async function createCalendlyInvitee({
   return created
 }
 
-function foldName(value) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-}
-
 export function calendlyScheduledEventUuid(uri) {
   const match = String(uri || "").match(/scheduled_events\/([^/?#]+)/i)
   return match?.[1] || null
@@ -226,20 +224,20 @@ export async function cancelCalendlyScheduledEvent(appointment) {
   const listed = await calendlyApi(`/scheduled_events?${params}`)
   if (!listed.ok) return listed
 
-  const name = foldName(appointment.client_name)
+  const name = appointment.client_name
   let removed = 0
   for (const event of listed.collection || []) {
     const eventUuid = calendlyScheduledEventUuid(event.uri)
     if (!eventUuid) continue
-    let matches = !name
-    if (name) {
+    let matches = !String(name || "").trim()
+    if (!matches) {
       const invitees = await calendlyApi(
         `/scheduled_events/${encodeURIComponent(eventUuid)}/invitees`
       )
-      matches = (invitees.collection || []).some((person) => {
-        const hay = foldName(person.name)
-        return hay.includes(name) || name.includes(hay)
-      })
+      matches = (invitees.collection || []).some((person) =>
+        namesMatch(cleanClientName(person.name), name)
+      )
+      if (!matches) matches = namesMatch(cleanClientName(event.name), name)
     }
     if (!matches) continue
     const canceled = await postCalendlyCancellation(eventUuid)
@@ -249,6 +247,61 @@ export async function cancelCalendlyScheduledEvent(appointment) {
   return removed
     ? { ok: true }
     : { ok: false, error: "No se encontró la cita en Calendly" }
+}
+
+export async function findCalendlyBookingsByName(clientName) {
+  if (!isCalendlyApiConfigured()) return { ok: true, bookings: [] }
+  const want = String(clientName || "").trim()
+  if (want.length < 2) return { ok: true, bookings: [] }
+
+  const me = await getCalendlyMe()
+  if (!me.ok) return { ok: true, bookings: [] }
+  const userUri = me.resource?.uri
+  if (!userUri) return { ok: true, bookings: [] }
+
+  const params = new URLSearchParams({
+    user: userUri,
+    status: "active",
+    min_start_time: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+    count: "25",
+  })
+  let path = `/scheduled_events?${params}`
+  const bookings = []
+
+  for (let page = 0; page < 4 && path; page += 1) {
+    const listed = await calendlyApi(path)
+    if (!listed.ok) break
+    for (const event of listed.collection || []) {
+      const uuid = calendlyScheduledEventUuid(event.uri)
+      if (!uuid) continue
+      const eventName = cleanClientName(event.name)
+      const invitees = await calendlyApi(
+        `/scheduled_events/${encodeURIComponent(uuid)}/invitees?status=active`
+      )
+      const people = invitees.collection || []
+      const person = people.find(
+        (invitee) =>
+          namesMatch(cleanClientName(invitee.name), want) ||
+          namesMatch(invitee.email, want)
+      )
+      if (!person && !namesMatch(eventName, want)) continue
+      const invitee = person || people[0] || {}
+      bookings.push({
+        client_name: cleanClientName(invitee.name || eventName) || want,
+        client_email: invitee.email || null,
+        starts_at: event.start_time,
+        ends_at: event.end_time,
+        calendly_event_uri: `https://api.calendly.com/scheduled_events/${uuid}`,
+        event_name: event.name,
+      })
+    }
+    const next = listed.pagination?.next_page
+    path = next
+      ? String(next).replace(/^https:\/\/api\.calendly\.com/i, "")
+      : null
+  }
+
+  return { ok: true, bookings }
 }
 
 export async function listCalendlyAvailableTimes({
