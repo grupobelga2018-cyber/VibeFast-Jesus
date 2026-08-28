@@ -24,17 +24,23 @@ const HOST_NAME_ALIASES = [
   "Color Hair by Gabby",
 ]
 
+export function mentionsCalendarHost(text) {
+  return /jes[uú]s\s+beltr[aá]n/i.test(String(text || ""))
+}
+
 export function cleanClientName(name) {
   let cleaned = String(name || "").replace(/\s+/g, " ").trim()
   if (!cleaned) return ""
+  cleaned = cleaned.replace(
+    /\s*(?:,|-)?\s*(?:and|y|&|with|con)\s+jes[uú]s\s+beltr[aá]n\s*/gi,
+    " "
+  )
+  cleaned = cleaned.replace(/\s*jes[uú]s\s+beltr[aá]n\s*/gi, " ")
   for (const host of HOST_NAME_ALIASES) {
     const escaped = host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")
-    cleaned = cleaned.replace(
-      new RegExp(`\\s+(?:and|y|&)\\s+${escaped}\\s*$`, "i"),
-      ""
-    )
+    cleaned = cleaned.replace(new RegExp(escaped, "ig"), " ")
   }
-  return cleaned.trim()
+  return cleaned.replace(/\s+/g, " ").trim()
 }
 
 export function zonedParts(date, timeZone = SALON_TZ) {

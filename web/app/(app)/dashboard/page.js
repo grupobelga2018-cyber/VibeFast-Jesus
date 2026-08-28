@@ -6,6 +6,7 @@ import {
   STATUS_BADGE,
   STATUS_LABELS,
   getService,
+  cleanClientName,
 } from "@/lib/appointments/helpers"
 import { needsGabyConfirm } from "@/lib/appointments/lifecycle"
 import { isTelegramConfigured } from "@/lib/telegram/client"
@@ -210,7 +211,7 @@ function AppointmentRow({ appt }) {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-semibold">{appt.client_name || "Sin nombre"}</p>
+            <p className="font-semibold">{cleanClientName(appt.client_name) || "Sin nombre"}</p>
             <span className={`badge badge-sm ${STATUS_BADGE[appt.status] || "badge-ghost"}`}>
               {STATUS_LABELS[appt.status] || appt.status}
             </span>

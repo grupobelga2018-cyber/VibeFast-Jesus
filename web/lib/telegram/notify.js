@@ -2,6 +2,7 @@ import config from "@/config"
 import {
   formatAppointmentWhen,
   getService,
+  cleanClientName,
 } from "@/lib/appointments/helpers"
 import { loadGoogleCalendarAuth } from "@/lib/google/calendar"
 import {
@@ -55,7 +56,7 @@ export async function notifyGabyAppointment(
         rescheduled
           ? "<b>Reprogramar · confirma el nuevo horario</b>"
           : "<b>Nueva cita por Telegram · confirma disponibilidad</b>",
-        `Clienta: ${appointment.client_name || "—"}`,
+        `Clienta: ${cleanClientName(appointment.client_name) || "—"}`,
         `Servicio: ${service?.name || appointment.service_slug}`,
         rescheduled && proposedWhen
           ? `Ahora: ${when}`
@@ -69,7 +70,7 @@ export async function notifyGabyAppointment(
     : [
         `<b>Cita ${rescheduled ? "reprogramada" : "nueva"}</b> (${appointment.channel})`,
         `Estado: ${appointment.status}`,
-        `Clienta: ${appointment.client_name || "—"}`,
+        `Clienta: ${cleanClientName(appointment.client_name) || "—"}`,
         `Servicio: ${service?.name || appointment.service_slug}`,
         `Cuándo: ${when}`,
         appointment.client_phone ? `Tel: ${appointment.client_phone}` : null,

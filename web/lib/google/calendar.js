@@ -7,6 +7,7 @@ import {
   getService,
   zonedParts,
   cleanClientName,
+  mentionsCalendarHost,
 } from "@/lib/appointments/helpers"
 import { GOOGLE_CALENDAR_SCOPES } from "@/lib/google/scopes"
 
@@ -377,6 +378,7 @@ export async function createGoogleCalendarEvent(appointment) {
         return { ok: true, skipped: true }
       }
       if (data?.google_event_id) {
+        await scrubHostNameFromCalendar(appointment, data.google_event_id)
         return { ok: true, eventId: data.google_event_id, skipped: true }
       }
     } catch (err) {
@@ -384,17 +386,9 @@ export async function createGoogleCalendarEvent(appointment) {
     }
   }
 
-  const payload = eventPayload(appointment)
-  const calendlyEvent = await findCalendlyHostTitledEvent(appointment)
-  if (calendlyEvent?.id) {
-    const patched = await calendarRequest(
-      "PATCH",
-      `/events/${encodeURIComponent(calendlyEvent.id)}`,
-      payload
-    )
-    if (patched.ok) return patched
-  }
-  return calendarRequest("POST", "/events", payload)
+  const scrubbed = await scrubHostNameFromCalendar(appointment)
+  if (scrubbed.eventId) return { ok: true, eventId: scrubbed.eventId }
+  return calendarRequest("POST", "/events", eventPayload(appointment))
 }
 
 export async function updateGoogleCalendarEvent(appointment) {
@@ -454,53 +448,65 @@ export async function deleteGoogleCalendarEvent(appointment) {
 async function findMatchingCalendarEvents(appointment) {
   const items = await listCalendarEventsNear(appointment)
   const name = cleanClientName(appointment.client_name).toLowerCase()
-  if (!name) return items
+  if (!name) {
+    return items.filter((event) => eventMentionsHost(event))
+  }
   return items.filter((event) => {
     const summary = String(event.summary || "").toLowerCase()
-    return summary.includes(name) || isCalendlyHostTitle(event.summary)
+    return summary.includes(name) || eventMentionsHost(event)
   })
 }
 
-function isCalendlyHostTitle(summary) {
-  return /\s+(?:and|y|&)\s+jes[uú]s\s+beltr[aá]n\s*$/i.test(String(summary || ""))
+function eventMentionsHost(event) {
+  const attendees = (event.attendees || [])
+    .map((person) => `${person.displayName || ""} ${person.email || ""}`)
+    .join(" ")
+  return mentionsCalendarHost(
+    `${event.summary || ""} ${event.description || ""} ${attendees}`
+  )
 }
 
 async function listCalendarEventsNear(appointment) {
   const start = new Date(appointment?.starts_at)
   if (Number.isNaN(start.getTime())) return []
-  const timeMin = new Date(start.getTime() - 10 * 60 * 1000).toISOString()
-  const timeMax = new Date(start.getTime() + 10 * 60 * 1000).toISOString()
+  const timeMin = new Date(start.getTime() - 45 * 60 * 1000).toISOString()
+  const timeMax = new Date(start.getTime() + 45 * 60 * 1000).toISOString()
   const qs = new URLSearchParams({
     timeMin,
     timeMax,
     singleEvents: "true",
-    maxResults: "15",
+    maxResults: "50",
   })
   const listed = await calendarRequest("GET", `/events?${qs}`)
   return listed.json?.items || []
 }
 
-async function findCalendlyHostTitledEvent(appointment) {
+export async function scrubHostNameFromCalendar(appointment, keepEventId = null) {
+  const payload = eventPayload(appointment)
   const items = await listCalendarEventsNear(appointment)
-  const name = cleanClientName(appointment.client_name).toLowerCase()
-  return (
-    items.find((event) => isCalendlyHostTitle(event.summary)) ||
-    items.find((event) => {
-      const summary = String(event.summary || "").toLowerCase()
-      return name && summary.includes(name) && / and | y /.test(summary)
-    }) ||
-    null
-  )
+  let kept = keepEventId
+  for (const event of items) {
+    if (!event?.id || !eventMentionsHost(event)) continue
+    if (!kept || event.id === kept) {
+      const path = `/events/${encodeURIComponent(event.id)}?sendUpdates=none`
+      let patched = await calendarRequest("PATCH", path, {
+        ...payload,
+        attendees: [],
+      })
+      if (!patched.ok) patched = await calendarRequest("PATCH", path, payload)
+      if (patched.ok) kept = event.id
+      continue
+    }
+    await calendarRequest(
+      "DELETE",
+      `/events/${encodeURIComponent(event.id)}?sendUpdates=none`
+    )
+  }
+  return { ok: true, eventId: kept || null, skipped: !kept }
 }
 
 export async function retitleCalendlyGoogleEvent(appointment) {
-  const event = await findCalendlyHostTitledEvent(appointment)
-  if (!event?.id) return { ok: true, skipped: true }
-  return calendarRequest(
-    "PATCH",
-    `/events/${encodeURIComponent(event.id)}`,
-    eventPayload(appointment)
-  )
+  return scrubHostNameFromCalendar(appointment, appointment?.google_event_id)
 }
 
 export async function syncOpenAppointmentsToGoogle() {
@@ -560,7 +566,7 @@ export async function syncOpenAppointmentsToGoogle() {
       .gte("starts_at", new Date().toISOString())
       .limit(25)
     for (const row of calendlyRows || []) {
-      await retitleCalendlyGoogleEvent(row).catch(() => {})
+      await scrubHostNameFromCalendar(row, row.google_event_id).catch(() => {})
     }
 
     return { ok: true, synced, removed }

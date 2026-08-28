@@ -9,7 +9,7 @@ import { calendlyScheduledEventUuid } from "@/lib/calendly/client"
 import {
   createGoogleCalendarEvent,
   persistGoogleEventId,
-  retitleCalendlyGoogleEvent,
+  scrubHostNameFromCalendar,
 } from "@/lib/google/calendar"
 import config from "@/config"
 
@@ -139,18 +139,25 @@ export async function POST(request) {
     await notifyGabyAppointment(data).catch(() => {})
     await sendAppointmentConfirmation(data).catch(() => {})
     after(() => {
-      Promise.resolve()
-        .then(() => new Promise((resolve) => setTimeout(resolve, 2500)))
-        .then(() => createGoogleCalendarEvent(data))
-        .then(async (gcal) => {
-          if (gcal.ok && gcal.eventId) {
-            await persistGoogleEventId(data.id, gcal.eventId)
+          const delays = [0, 4000, 12000]
+      ;(async () => {
+        let eventId = data.google_event_id || null
+        for (const ms of delays) {
+          await new Promise((resolve) => setTimeout(resolve, ms))
+          if (!eventId) {
+            const created = await createGoogleCalendarEvent(data)
+            if (created.ok && created.eventId) eventId = created.eventId
           }
-          await retitleCalendlyGoogleEvent(data)
-        })
-        .catch((err) => {
-          console.warn("[calendly] google sync:", err.message)
-        })
+          const scrubbed = await scrubHostNameFromCalendar(
+            { ...data, google_event_id: eventId },
+            eventId
+          )
+          if (scrubbed.eventId) eventId = scrubbed.eventId
+          if (eventId) await persistGoogleEventId(data.id, eventId)
+        }
+      })().catch((err) => {
+        console.warn("[calendly] google sync:", err.message)
+      })
     })
     return NextResponse.json({ ok: true, id: data.id })
   }
