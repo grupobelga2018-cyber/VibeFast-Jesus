@@ -1,11 +1,11 @@
 import { createHmac, timingSafeEqual } from "crypto"
 import { NextResponse, after } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { endsAtFromStart, cleanClientName, getService } from "@/lib/appointments/helpers"
+import { endsAtFromStart, cleanClientName, getService, guessServiceSlugFromText } from "@/lib/appointments/helpers"
 import { sendAppointmentConfirmation } from "@/lib/appointments/notify"
 import { notifyGabyAppointment } from "@/lib/telegram/notify"
 import { cancelAppointment } from "@/lib/appointments/lifecycle"
-import { calendlyScheduledEventUuid } from "@/lib/calendly/client"
+import { calendlyScheduledEventUuid, getCalendlyEventType } from "@/lib/calendly/client"
 import {
   createGoogleCalendarEvent,
   persistGoogleEventId,
@@ -61,11 +61,7 @@ function scheduledEventUri(invitee = {}, scheduled = {}) {
 }
 
 function guessServiceSlug(eventName = "") {
-  const lower = eventName.toLowerCase()
-  const match = config.services.find(
-    (s) => lower.includes(s.slug) || lower.includes(s.name.toLowerCase())
-  )
-  return match?.slug || "corte"
+  return guessServiceSlugFromText(eventName)
 }
 
 function calendlyNotes(scheduled, invitee, serviceSlug) {
@@ -104,9 +100,19 @@ export async function POST(request) {
       return NextResponse.json({ error: "Missing start_time" }, { status: 400 })
     }
 
-    const serviceSlug = guessServiceSlug(
-      invitee.event_type?.name || scheduled.event_type?.name || scheduled.name || ""
-    )
+    let typeName =
+      invitee.event_type?.name || scheduled.event_type?.name || ""
+    const typeUri =
+      (typeof scheduled.event_type === "string" && scheduled.event_type) ||
+      scheduled.event_type?.uri ||
+      (typeof invitee.event_type === "string" && invitee.event_type) ||
+      invitee.event_type?.uri ||
+      null
+    if (!typeName && typeUri) {
+      const details = await getCalendlyEventType(typeUri)
+      typeName = details.ok ? details.resource?.name || "" : ""
+    }
+    const serviceSlug = guessServiceSlug(`${typeName} ${scheduled.name || ""}`)
     const row = {
       client_name: inviteeDisplayName(invitee),
       client_email: invitee.email || invitee.invitee?.email || null,
@@ -122,7 +128,7 @@ export async function POST(request) {
       channel: "calendly",
       status: "confirmed",
       calendly_event_uri: eventUri,
-      notes: calendlyNotes(scheduled, invitee, serviceSlug),
+      notes: typeName || calendlyNotes(scheduled, invitee, serviceSlug),
     }
 
     const { data, error } = await supabase

@@ -6,7 +6,7 @@ import {
 } from "@/lib/appointments/lifecycle"
 import {
   formatAppointmentWhen,
-  getService,
+  displayServiceName,
 } from "@/lib/appointments/helpers"
 import {
   isGabyTelegramUser,
@@ -121,14 +121,14 @@ async function handleCallbackQuery(query) {
 
   if (chatId && messageId) {
     const appt = result.appointment
-    const service = appt ? getService(appt.service_slug) : null
+    const serviceName = appt ? displayServiceName(appt) : ""
     const when = appt ? formatAppointmentWhen(appt.starts_at) : ""
     const body = result.ok
       ? accept
         ? [
             `<b>Cita registrada</b>`,
             `Clienta: ${appt.client_name || "—"}`,
-            `Servicio: ${service?.name || appt.service_slug}`,
+            `Servicio: ${serviceName}`,
             `Cuándo: ${when}`,
             "Ya le enviamos la confirmación por Telegram.",
           ].join("\n")

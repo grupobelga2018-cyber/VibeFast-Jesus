@@ -4,6 +4,22 @@ export function getService(slug) {
   return config.services.find((s) => s.slug === slug) || null
 }
 
+export function displayServiceName(appointment) {
+  const slug =
+    typeof appointment === "string"
+      ? appointment
+      : appointment?.service_slug
+  const notes = typeof appointment === "object" ? appointment?.notes : ""
+  const service = getService(slug)
+  if (
+    slug === "color" ||
+    /tinte|tintura|coloracion|balayage|mechas/i.test(String(notes || ""))
+  ) {
+    return "Tinte"
+  }
+  return service?.name || slug || "Servicio"
+}
+
 export function serviceDurationMin(slug) {
   return getService(slug)?.durationMin ?? 60
 }
@@ -45,6 +61,13 @@ export function namesMatch(haystack, needle) {
 
 export function guessServiceSlugFromText(eventName = "") {
   const lower = foldName(eventName)
+  if (
+    /tinte|tintura|coloracion|balayage|mechas|rayito|decolor|iluminacion/.test(
+      lower
+    )
+  ) {
+    return "color"
+  }
   const match = config.services.find(
     (s) => lower.includes(foldName(s.slug)) || lower.includes(foldName(s.name))
   )

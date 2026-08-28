@@ -224,8 +224,8 @@ export async function cancelCalendlyScheduledEvent(appointment) {
 
   const params = new URLSearchParams({
     user: userUri,
-    min_start_time: new Date(start.getTime() - 15 * 60 * 1000).toISOString(),
-    max_start_time: new Date(start.getTime() + 15 * 60 * 1000).toISOString(),
+    min_start_time: new Date(start.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+    max_start_time: new Date(start.getTime() + 2 * 60 * 60 * 1000).toISOString(),
     status: "active",
   })
   const listed = await calendlyApi(`/scheduled_events?${params}`)
@@ -249,6 +249,19 @@ export async function cancelCalendlyScheduledEvent(appointment) {
     if (!matches) continue
     const canceled = await postCalendlyCancellation(eventUuid)
     if (canceled.ok) removed += 1
+  }
+
+  if (!removed && name) {
+    const found = await findCalendlyBookingsByName(name)
+    for (const booking of found.bookings || []) {
+      const bookingStart = new Date(booking.starts_at).getTime()
+      if (Number.isNaN(bookingStart)) continue
+      if (Math.abs(bookingStart - start.getTime()) > 2 * 60 * 60 * 1000) continue
+      const eventUuid = calendlyScheduledEventUuid(booking.calendly_event_uri)
+      if (!eventUuid) continue
+      const canceled = await postCalendlyCancellation(eventUuid)
+      if (canceled.ok) removed += 1
+    }
   }
 
   return removed
@@ -325,6 +338,7 @@ export async function findCalendlyBookingsByName(clientName) {
           ends_at: event.end_time,
           calendly_event_uri: `https://api.calendly.com/scheduled_events/${uuid}`,
           event_name: event.name,
+          event_type_uri: event.event_type || null,
         })
       }
       const next = listed.pagination?.next_page

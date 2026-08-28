@@ -1,6 +1,6 @@
 import { after } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { endsAtFromStart, parseSalonDateTime } from "@/lib/appointments/helpers"
+import { endsAtFromStart, parseSalonDateTime, namesMatch } from "@/lib/appointments/helpers"
 import { resolveOpenAppointment } from "@/lib/appointments/find"
 import { notifyGabyAppointment } from "@/lib/telegram/notify"
 import { sendTelegramMessage } from "@/lib/telegram/client"
@@ -20,7 +20,48 @@ import {
   persistGoogleEventId,
   upsertGoogleCalendarEvent,
   deleteGoogleCalendarEvent,
+  searchGoogleCalendarByName,
 } from "@/lib/google/calendar"
+
+async function siblingAppointments(appointment) {
+  if (!appointment?.id) return [appointment].filter(Boolean)
+  const supabase = createAdminClient()
+  const start = new Date(appointment.starts_at)
+  if (Number.isNaN(start.getTime()) || !appointment.client_name) {
+    return [appointment]
+  }
+  const { data } = await supabase
+    .from("appointments")
+    .select("*")
+    .neq("status", "cancelled")
+    .gte("starts_at", new Date(start.getTime() - 45 * 60 * 1000).toISOString())
+    .lte("starts_at", new Date(start.getTime() + 45 * 60 * 1000).toISOString())
+  const rows = (data || []).filter((row) =>
+    namesMatch(row.client_name, appointment.client_name)
+  )
+  if (!rows.some((row) => row.id === appointment.id)) rows.push(appointment)
+  return rows
+}
+
+function mergeExternalRefs(rows, fallback) {
+  const list = rows?.length ? rows : [fallback]
+  return {
+    ...fallback,
+    calendly_event_uri:
+      list.find((row) => row.calendly_event_uri)?.calendly_event_uri ||
+      fallback.calendly_event_uri,
+    google_event_id:
+      list.find((row) => row.google_event_id)?.google_event_id ||
+      fallback.google_event_id,
+    channel: list.some(
+      (row) => row.channel === "calendly" || row.calendly_event_uri
+    )
+      ? "calendly"
+      : fallback.channel,
+    starts_at:
+      list.find((row) => row.calendly_event_uri)?.starts_at || fallback.starts_at,
+  }
+}
 
 async function removeFromExternalCalendars(appointment, { fromCalendly = false } = {}) {
   let calendly = { ok: true, skipped: true }
@@ -41,6 +82,20 @@ async function removeFromExternalCalendars(appointment, { fromCalendly = false }
   let gcal = { ok: true, skipped: true }
   try {
     gcal = await deleteGoogleCalendarEvent(appointment)
+      const extras = await searchGoogleCalendarByName(appointment.client_name)
+      for (const hit of extras) {
+        const hitStart = new Date(hit.starts_at).getTime()
+        const apptStart = new Date(appointment.starts_at).getTime()
+        if (Number.isNaN(hitStart) || Number.isNaN(apptStart)) continue
+        if (Math.abs(hitStart - apptStart) > 2 * 60 * 60 * 1000) continue
+        const deleted = await deleteGoogleCalendarEvent({
+          google_event_id: hit.google_event_id,
+          google_calendar_id: hit.google_calendar_id,
+          starts_at: hit.starts_at,
+          client_name: appointment.client_name,
+        })
+        if (deleted.ok && !deleted.skipped) gcal = { ok: true }
+      }
   } catch (err) {
     gcal = { ok: false, error: err.message }
   }
@@ -174,18 +229,24 @@ export async function cancelAppointment(
   if (error || !current) return { ok: false, error: "Cita no encontrada" }
 
   let data = current
-  if (current.status !== "cancelled") {
+  const siblings = await siblingAppointments(current)
+  const target = mergeExternalRefs(siblings, current)
+
+  const ids = [...new Set(siblings.map((row) => row.id).filter(Boolean))]
+  for (const siblingId of ids) {
+    const row = siblings.find((item) => item.id === siblingId)
+    if (row?.status === "cancelled") continue
     const updated = await supabase
       .from("appointments")
       .update({ status: "cancelled", proposed_starts_at: null })
-      .eq("id", id)
+      .eq("id", siblingId)
       .select()
       .single()
     if (updated.error) return { ok: false, error: updated.error.message }
-    data = updated.data
+    if (siblingId === id) data = updated.data
   }
 
-  const { calendly, gcal } = await removeFromExternalCalendars(current, {
+  const { calendly, gcal } = await removeFromExternalCalendars(target, {
     fromCalendly,
   })
 
@@ -201,7 +262,7 @@ export async function cancelAppointment(
     appointment: data,
     calendarRemoved: Boolean(gcal.ok && !gcal.skipped),
     calendlyRemoved: Boolean(calendly.ok && !calendly.skipped),
-    calendlyError: calendly.ok || calendly.skipped ? null : calendly.error,
+    calendlyError: calendly.ok ? null : calendly.error || null,
   }
 }
 

@@ -1,7 +1,7 @@
 import config from "@/config"
 import {
   formatAppointmentWhen,
-  getService,
+  displayServiceName,
   cleanClientName,
 } from "@/lib/appointments/helpers"
 import { loadGoogleCalendarAuth } from "@/lib/google/calendar"
@@ -37,7 +37,7 @@ export async function notifyGabyAppointment(
   const adminChatId = getAdminChatId()
   if (!adminChatId) return { ok: false, skipped: true, reason: "no_admin_chat" }
 
-  const service = getService(appointment.service_slug)
+  const serviceLabel = displayServiceName(appointment)
   const proposed = appointment.proposed_starts_at
   const when = formatAppointmentWhen(appointment.starts_at)
   const proposedWhen = proposed ? formatAppointmentWhen(proposed) : null
@@ -57,7 +57,7 @@ export async function notifyGabyAppointment(
           ? "<b>Reprogramar · confirma el nuevo horario</b>"
           : "<b>Nueva cita por Telegram · confirma disponibilidad</b>",
         `Clienta: ${cleanClientName(appointment.client_name) || "—"}`,
-        `Servicio: ${service?.name || appointment.service_slug}`,
+        `Servicio: ${serviceLabel}`,
         rescheduled && proposedWhen
           ? `Ahora: ${when}`
           : `Cuándo: ${proposedWhen || when}`,
@@ -71,7 +71,7 @@ export async function notifyGabyAppointment(
         `<b>Cita ${rescheduled ? "reprogramada" : "nueva"}</b> (${appointment.channel})`,
         `Estado: ${appointment.status}`,
         `Clienta: ${cleanClientName(appointment.client_name) || "—"}`,
-        `Servicio: ${service?.name || appointment.service_slug}`,
+        `Servicio: ${serviceLabel}`,
         `Cuándo: ${when}`,
         appointment.client_phone ? `Tel: ${appointment.client_phone}` : null,
         appointment.notes ? `Notas: ${appointment.notes}` : null,

@@ -4,11 +4,12 @@ import config from "@/config"
 import { createAdminClient } from "@/lib/supabase/admin"
 import {
   endsAtFromStart,
-  getService,
+  displayServiceName,
   zonedParts,
   cleanClientName,
   mentionsCalendarHost,
   namesMatch,
+  foldName,
 } from "@/lib/appointments/helpers"
 import { GOOGLE_CALENDAR_SCOPES } from "@/lib/google/scopes"
 
@@ -311,7 +312,6 @@ export async function fetchGoogleEmail(accessToken) {
 }
 
 function eventPayload(appointment) {
-  const service = getService(appointment.service_slug)
   const start = new Date(appointment.starts_at)
   const end = appointment.ends_at
     ? new Date(appointment.ends_at)
@@ -319,7 +319,7 @@ function eventPayload(appointment) {
   const tz = config.booking.timezone
   const clientName = cleanClientName(appointment.client_name) || "Clienta"
   return {
-    summary: `${service?.name || appointment.service_slug} · ${clientName}`,
+    summary: `${displayServiceName(appointment)} · ${clientName}`,
     description: [
       `Cita de ${config.app.name}`,
       appointment.client_phone ? `Tel: ${appointment.client_phone}` : null,
@@ -426,7 +426,29 @@ export async function searchGoogleCalendarByName(clientName) {
     for (const event of listed.json?.items || []) {
       if (event.status === "cancelled") continue
       const summary = String(event.summary || "")
-      if (!namesMatch(cleanClientName(summary), want) && !namesMatch(summary, want)) {
+      const blob = [
+        summary,
+        event.description || "",
+        ...(event.attendees || []).map(
+          (person) => `${person.displayName || ""} ${person.email || ""}`
+        ),
+      ].join(" ")
+      const leftover = cleanClientName(summary)
+        .replace(
+          /\b(tinte|tintura|color|corte|peinado|facial|maquillaje|balayage|mechas|cita)\b/gi,
+          " "
+        )
+        .replace(/[·•\-|,]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+      const serviceOnly =
+        !leftover &&
+        /tinte|color|corte|peinado|facial|maquillaje|balayage|mechas/i.test(summary)
+      if (
+        !namesMatch(blob, want) &&
+        !namesMatch(cleanClientName(blob), want) &&
+        !serviceOnly
+      ) {
         continue
       }
       const start = event.start?.dateTime || event.start?.date
@@ -436,7 +458,9 @@ export async function searchGoogleCalendarByName(clientName) {
         starts_at: start,
         ends_at: event.end?.dateTime || event.end?.date || null,
         google_event_id: event.id,
+        google_calendar_id: id,
         event_name: summary,
+        description: event.description || "",
       })
     }
   }
@@ -496,12 +520,19 @@ export async function upsertGoogleCalendarEvent(appointment) {
 export async function deleteGoogleCalendarEvent(appointment) {
   let removedById = false
   if (appointment?.google_event_id) {
-    const path = `/events/${encodeURIComponent(appointment.google_event_id)}`
-    const result = await calendarRequest("DELETE", path)
-    if (result.ok || result.status === 404 || result.status === 410) {
-      removedById = true
-    } else {
-      console.error("[gcal] delete by id:", result.error)
+    const ids = appointment.google_calendar_id
+      ? [appointment.google_calendar_id]
+      : await listWritableCalendarIds()
+    for (const id of ids) {
+      const path = `/events/${encodeURIComponent(appointment.google_event_id)}?sendUpdates=none`
+      const result = await calendarRequest("DELETE", path, undefined, id)
+      if (result.ok) {
+        removedById = true
+        break
+      }
+      if (result.status !== 404 && result.status !== 410) {
+        console.error("[gcal] delete by id:", result.error)
+      }
     }
   }
 
@@ -531,13 +562,34 @@ export async function deleteGoogleCalendarEvent(appointment) {
 
 async function findMatchingCalendarEvents(appointment) {
   const items = await listCalendarEventsNear(appointment)
-  const name = cleanClientName(appointment.client_name).toLowerCase()
-  if (!name) {
-    return items.filter((event) => eventMentionsHost(event))
-  }
+  const name = foldName(cleanClientName(appointment.client_name))
   return items.filter((event) => {
-    const summary = String(event.summary || "").toLowerCase()
-    return summary.includes(name) || eventMentionsHost(event)
+    const summary = String(event.summary || "")
+    const blob = [
+      summary,
+      event.description || "",
+      ...(event.attendees || []).map(
+        (person) => `${person.displayName || ""} ${person.email || ""}`
+      ),
+    ].join(" ")
+    if (name && (foldName(blob).includes(name) || namesMatch(blob, appointment.client_name))) {
+      return true
+    }
+    const leftover = cleanClientName(summary)
+      .replace(
+        /\b(tinte|tintura|color|corte|peinado|facial|maquillaje|balayage|mechas|cita)\b/gi,
+        " "
+      )
+      .replace(/[·•\-|,]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+    if (
+      !leftover &&
+      /tinte|color|corte|peinado|facial|maquillaje|balayage|mechas/i.test(summary)
+    ) {
+      return true
+    }
+    return false
   })
 }
 
@@ -553,8 +605,8 @@ function eventMentionsHost(event) {
 async function listCalendarEventsNear(appointment) {
   const start = new Date(appointment?.starts_at)
   if (Number.isNaN(start.getTime())) return []
-  const timeMin = new Date(start.getTime() - 45 * 60 * 1000).toISOString()
-  const timeMax = new Date(start.getTime() + 45 * 60 * 1000).toISOString()
+  const timeMin = new Date(start.getTime() - 2 * 60 * 60 * 1000).toISOString()
+  const timeMax = new Date(start.getTime() + 2 * 60 * 60 * 1000).toISOString()
   const qs = new URLSearchParams({
     timeMin,
     timeMax,
