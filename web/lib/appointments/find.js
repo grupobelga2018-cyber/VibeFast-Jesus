@@ -8,6 +8,7 @@ import {
   cleanClientName,
 } from "@/lib/appointments/helpers"
 import { findCalendlyBookingsByName } from "@/lib/calendly/client"
+import { searchGoogleCalendarByName } from "@/lib/google/calendar"
 
 const OPEN_STATUSES = ["pending", "confirmed", "rescheduled"]
 
@@ -29,9 +30,18 @@ function summarize(row) {
   }
 }
 
+function sqlNeedle(name) {
+  return String(name || "")
+    .replace(/[%_,()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 async function importCalendlyByName(name) {
   const found = await findCalendlyBookingsByName(name)
-  if (!found.bookings?.length) return []
+  if (!found.bookings?.length) {
+    return { rows: [], error: found.skipped ? found.error : found.error || null }
+  }
 
   const supabase = createAdminClient()
   const imported = []
@@ -57,6 +67,43 @@ async function importCalendlyByName(name) {
       .select()
       .single()
     if (error) console.warn("[calendly] import:", error.message)
+    else if (data) imported.push(data)
+  }
+  return { rows: imported, error: null }
+}
+
+async function importGoogleByName(name) {
+  const hits = await searchGoogleCalendarByName(name).catch(() => [])
+  if (!hits.length) return []
+  const supabase = createAdminClient()
+  const imported = []
+  for (const hit of hits) {
+    const serviceSlug = guessServiceSlugFromText(hit.event_name)
+    const existing = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("google_event_id", hit.google_event_id)
+      .maybeSingle()
+    if (existing.data) {
+      imported.push(existing.data)
+      continue
+    }
+    const { data, error } = await supabase
+      .from("appointments")
+      .insert({
+        client_name: cleanClientName(hit.client_name) || name,
+        service_slug: serviceSlug,
+        starts_at: hit.starts_at,
+        ends_at:
+          hit.ends_at ||
+          endsAtFromStart(hit.starts_at, serviceSlug).toISOString(),
+        channel: "calendly",
+        status: "confirmed",
+        google_event_id: hit.google_event_id,
+      })
+      .select()
+      .single()
+    if (error) console.warn("[gcal] import search:", error.message)
     else if (data) imported.push(data)
   }
   return imported
@@ -92,21 +139,58 @@ export async function findUpcomingAppointments({
     }
   }
 
-  const { data, error } = await supabase
+  const since = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  const needle = sqlNeedle(name)
+  let localQuery = supabase
     .from("appointments")
     .select("*")
     .in("status", OPEN_STATUSES)
-    .gte("starts_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
+    .gte("starts_at", since)
     .order("starts_at", { ascending: true })
-    .limit(100)
+    .limit(50)
+  if (needle) {
+    localQuery = localQuery.or(
+      `client_name.ilike.%${needle}%,notes.ilike.%${needle}%,client_email.ilike.%${needle}%`
+    )
+  }
 
-  if (error) return { ok: false, error: error.message, appointments: [] }
+  const [{ data, error }, calendly] = await Promise.all([
+    localQuery,
+    importCalendlyByName(name),
+  ])
 
-  let matched = (data || []).filter((row) => namesMatch(row.client_name, name))
+  if (error) console.warn("[citas] local search:", error.message)
+
+  const fromLocal = (data || []).filter(
+    (row) =>
+      namesMatch(row.client_name, name) ||
+      namesMatch(row.notes, name) ||
+      namesMatch(row.client_email, name)
+  )
+  let matched = [...fromLocal, ...(calendly.rows || [])]
+  const seen = new Set()
+  matched = matched.filter((row) => {
+    if (seen.has(row.id)) return false
+    seen.add(row.id)
+    return true
+  })
+
   if (!matched.length) {
-    const imported = await importCalendlyByName(name)
-    matched = imported.filter((row) => namesMatch(row.client_name, name) || namesMatch(name, row.client_name))
-    if (!matched.length) matched = imported
+    const fromGoogle = await importGoogleByName(name)
+    matched = fromGoogle
+  }
+
+  if (!matched.length) {
+    const reason = calendly.error === "missing_token"
+      ? " Falta CALENDLY_API_TOKEN en Vercel para leer Calendly."
+      : calendly.error
+        ? ` Calendly respondió: ${calendly.error}.`
+        : ""
+    return {
+      ok: true,
+      appointments: [],
+      message: `No encontré una cita a nombre de ${name}.${reason}`,
+    }
   }
 
   return {
@@ -126,7 +210,9 @@ export async function resolveOpenAppointment({
     return {
       ok: false,
       error: "no_encontrada",
-      message: `No encontré una cita a nombre de ${client_name} (tampoco en Calendly). Confirma el nombre.`,
+      message:
+        found.message ||
+        `No encontré una cita a nombre de ${client_name} (tampoco en Calendly). Confirma el nombre.`,
       appointments: [],
     }
   }

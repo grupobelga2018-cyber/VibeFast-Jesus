@@ -8,6 +8,7 @@ import {
   zonedParts,
   cleanClientName,
   mentionsCalendarHost,
+  namesMatch,
 } from "@/lib/appointments/helpers"
 import { GOOGLE_CALENDAR_SCOPES } from "@/lib/google/scopes"
 
@@ -405,6 +406,41 @@ export async function hideHostCalendarNames() {
     }
   }
   return { ok: true }
+}
+
+export async function searchGoogleCalendarByName(clientName) {
+  const want = String(clientName || "").trim()
+  if (want.length < 2) return []
+  const timeMin = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  const qs = new URLSearchParams({
+    q: want,
+    timeMin,
+    singleEvents: "true",
+    maxResults: "15",
+    orderBy: "startTime",
+  })
+  const ids = await listWritableCalendarIds()
+  const hits = []
+  for (const id of ids) {
+    const listed = await calendarRequest("GET", `/events?${qs}`, undefined, id)
+    for (const event of listed.json?.items || []) {
+      if (event.status === "cancelled") continue
+      const summary = String(event.summary || "")
+      if (!namesMatch(cleanClientName(summary), want) && !namesMatch(summary, want)) {
+        continue
+      }
+      const start = event.start?.dateTime || event.start?.date
+      if (!start) continue
+      hits.push({
+        client_name: cleanClientName(summary) || want,
+        starts_at: start,
+        ends_at: event.end?.dateTime || event.end?.date || null,
+        google_event_id: event.id,
+        event_name: summary,
+      })
+    }
+  }
+  return hits
 }
 
 export async function createGoogleCalendarEvent(appointment) {
