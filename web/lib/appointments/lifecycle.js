@@ -120,7 +120,9 @@ export async function rejectAppointment(id, { reschedule = false } = {}) {
   if (!gcal.ok && !gcal.skipped) {
     console.error("[gcal] reject:", gcal.error)
   }
-  await persistGoogleEventId(data.id, null)
+  if (gcal.ok) {
+    await persistGoogleEventId(data.id, null)
+  }
   await sendSlotUnavailable(data).catch(() => {})
   return { ok: true, appointment: data, rescheduled: false }
 }
@@ -151,7 +153,7 @@ export async function cancelAppointment(id, { notifyClient = true } = {}) {
   if (!gcal.ok && !gcal.skipped) {
     console.error("[gcal] cancel:", gcal.error)
   }
-  if (current.google_event_id) {
+  if (gcal.ok) {
     await persistGoogleEventId(data.id, null)
   }
 
@@ -165,7 +167,7 @@ export async function cancelAppointment(id, { notifyClient = true } = {}) {
   return {
     ok: true,
     appointment: data,
-    calendarRemoved: Boolean(current.google_event_id && gcal.ok),
+    calendarRemoved: Boolean(gcal.ok && !gcal.skipped),
   }
 }
 

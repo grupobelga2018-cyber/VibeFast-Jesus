@@ -353,9 +353,9 @@ async function calendarRequest(method, pathname, body) {
   if (!res.ok) {
     const message = json.error?.message || res.statusText
     console.error(`[gcal] ${method} ${pathname}:`, message)
-    return { ok: false, error: message, status: res.status }
+    return { ok: false, error: message, status: res.status, json }
   }
-  return { ok: true, eventId: json.id, htmlLink: json.htmlLink }
+  return { ok: true, eventId: json.id, htmlLink: json.htmlLink, json }
 }
 
 export async function createGoogleCalendarEvent(appointment) {
@@ -368,9 +368,10 @@ export async function createGoogleCalendarEvent(appointment) {
         .eq("id", appointment.id)
         .maybeSingle()
       if (data?.status === "cancelled") {
-        if (data.google_event_id) {
-          await deleteGoogleCalendarEvent({ google_event_id: data.google_event_id })
-        }
+        await deleteGoogleCalendarEvent({
+          ...appointment,
+          google_event_id: data.google_event_id || appointment.google_event_id,
+        })
         return { ok: true, skipped: true }
       }
       if (data?.google_event_id) {
@@ -404,15 +405,57 @@ export async function upsertGoogleCalendarEvent(appointment) {
 }
 
 export async function deleteGoogleCalendarEvent(appointment) {
-  if (!appointment?.google_event_id) {
-    return { ok: true, skipped: true }
+  let removedById = false
+  if (appointment?.google_event_id) {
+    const path = `/events/${encodeURIComponent(appointment.google_event_id)}`
+    const result = await calendarRequest("DELETE", path)
+    if (result.ok || result.status === 404 || result.status === 410) {
+      removedById = true
+    } else {
+      console.error("[gcal] delete by id:", result.error)
+    }
   }
-  const path = `/events/${encodeURIComponent(appointment.google_event_id)}`
-  const result = await calendarRequest("DELETE", path)
-  if (result.ok || result.status === 404 || result.status === 410) {
-    return { ok: true, eventId: appointment.google_event_id }
+
+  const matches = await findMatchingCalendarEvents(appointment)
+  let removed = 0
+  for (const event of matches) {
+    if (event.id === appointment?.google_event_id && removedById) continue
+    const deleted = await calendarRequest(
+      "DELETE",
+      `/events/${encodeURIComponent(event.id)}`
+    )
+    if (deleted.ok || deleted.status === 404 || deleted.status === 410) {
+      removed += 1
+    }
   }
-  return result
+
+  if (removedById || removed) {
+    return { ok: true, eventId: appointment?.google_event_id || matches[0]?.id }
+  }
+  if (appointment?.google_event_id) {
+    return { ok: false, error: "No se pudo borrar el evento de Google Calendar" }
+  }
+  return { ok: true, skipped: true }
+}
+
+async function findMatchingCalendarEvents(appointment) {
+  const start = new Date(appointment?.starts_at)
+  if (Number.isNaN(start.getTime())) return []
+  const timeMin = new Date(start.getTime() - 10 * 60 * 1000).toISOString()
+  const timeMax = new Date(start.getTime() + 10 * 60 * 1000).toISOString()
+  const qs = new URLSearchParams({
+    timeMin,
+    timeMax,
+    singleEvents: "true",
+    maxResults: "15",
+  })
+  const listed = await calendarRequest("GET", `/events?${qs}`)
+  const items = listed.json?.items || []
+  const name = String(appointment.client_name || "").trim().toLowerCase()
+  if (!name) return items
+  return items.filter((event) =>
+    String(event.summary || "").toLowerCase().includes(name)
+  )
 }
 
 export async function syncOpenAppointmentsToGoogle() {
@@ -436,12 +479,35 @@ export async function syncOpenAppointmentsToGoogle() {
     let synced = 0
     for (const row of data || []) {
       const created = await createGoogleCalendarEvent(row)
-      if (created.ok) {
+      if (created.ok && !created.skipped && created.eventId) {
         await persistGoogleEventId(row.id, created.eventId)
         synced += 1
       }
     }
-    return { ok: true, synced }
+
+    const { data: cancelled, error: cancelErr } = await supabase
+      .from("appointments")
+      .select("id,google_event_id")
+      .eq("status", "cancelled")
+      .not("google_event_id", "is", null)
+      .gte("starts_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
+      .limit(25)
+    if (cancelErr) {
+      console.warn("[gcal] cancel cleanup list:", cancelErr.message)
+    }
+
+    let removed = 0
+    for (const row of cancelled || []) {
+      const deleted = await deleteGoogleCalendarEvent({
+        google_event_id: row.google_event_id,
+      })
+      if (deleted.ok) {
+        await persistGoogleEventId(row.id, null)
+        removed += 1
+      }
+    }
+
+    return { ok: true, synced, removed }
   } catch (err) {
     console.warn("[gcal] backfill:", err.message)
     return { ok: false, error: err.message }
@@ -452,11 +518,25 @@ export async function persistGoogleEventId(appointmentId, eventId) {
   if (!appointmentId) return
   try {
     const supabase = createAdminClient()
-    const { error } = await supabase
+    if (!eventId) {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ google_event_id: null })
+        .eq("id", appointmentId)
+      if (error) console.warn("[gcal] persist id:", error.message)
+      return
+    }
+    const { data, error } = await supabase
       .from("appointments")
-      .update({ google_event_id: eventId || null })
+      .update({ google_event_id: eventId })
       .eq("id", appointmentId)
+      .neq("status", "cancelled")
+      .select("id")
+      .maybeSingle()
     if (error) console.warn("[gcal] persist id:", error.message)
+    else if (!data) {
+      await deleteGoogleCalendarEvent({ google_event_id: eventId })
+    }
   } catch (err) {
     console.warn("[gcal] persist id:", err.message)
   }
