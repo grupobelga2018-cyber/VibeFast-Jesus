@@ -2,7 +2,8 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { LayoutDashboard, MessageSquare, Bot } from "lucide-react"
 import config from "@/config"
-import { getUser } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
+import { isStaffUser } from "@/lib/auth/staff"
 import UserMenu from "@/components/auth/UserMenu"
 import Logo from "@/components/Logo"
 
@@ -15,8 +16,15 @@ const NAV = [
 // Layout de la zona privada. El middleware ya bloquea sin sesión,
 // pero revalidamos aquí para tener el `user` y proteger por si acaso.
 export default async function AppLayout({ children }) {
-  const user = await getUser()
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) redirect(config.auth.loginUrl)
+  if (!(await isStaffUser(supabase, user.email))) {
+    await supabase.auth.signOut()
+    redirect(`${config.auth.loginUrl}?error=unauthorized`)
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-base-200">

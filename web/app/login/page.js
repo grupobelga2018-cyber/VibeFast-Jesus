@@ -1,20 +1,29 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import config from "@/config"
-import { getUser } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
+import { isStaffUser } from "@/lib/auth/staff"
 import GoogleButton from "@/components/auth/GoogleButton"
 import Logo from "@/components/Logo"
 
 export const metadata = { title: "Entrar" }
 
 export default async function LoginPage({ searchParams }) {
-  const user = await getUser()
-  if (user) redirect(config.auth.afterLoginUrl)
-
   const params = await searchParams
   const next =
     typeof params?.next === "string" ? params.next : config.auth.afterLoginUrl
   const errorCode = typeof params?.error === "string" ? params.error : ""
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user) {
+    if (await isStaffUser(supabase, user.email)) {
+      redirect(config.auth.afterLoginUrl)
+    }
+    await supabase.auth.signOut()
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-base-200 px-4">
@@ -56,7 +65,15 @@ export default async function LoginPage({ searchParams }) {
             </p>
           </div>
         )}
-        {errorCode && errorCode !== "access_denied" && (
+        {errorCode === "unauthorized" && (
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error"
+          >
+            Esta cuenta no está autorizada para entrar al dashboard.
+          </div>
+        )}
+        {errorCode && errorCode !== "access_denied" && errorCode !== "unauthorized" && (
           <div
             role="alert"
             className="mt-4 rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm text-error"

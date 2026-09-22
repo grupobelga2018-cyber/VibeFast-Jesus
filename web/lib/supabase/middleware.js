@@ -14,10 +14,11 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse } from "next/server"
 import config from "@/config"
+import { isStaffUser } from "@/lib/auth/staff"
 
 // Rutas que requieren sesión. Todo lo que cuelga de /(app) en realidad,
 // pero el middleware no ve grupos de rutas, así que listamos prefijos.
-const PROTECTED_PREFIXES = ["/dashboard", "/account", "/chat"]
+const PROTECTED_PREFIXES = ["/dashboard", "/account", "/chat", "/agent"]
 
 export async function updateSession(request) {
   let response = NextResponse.next({ request })
@@ -57,19 +58,37 @@ export async function updateSession(request) {
 
   const { pathname } = request.nextUrl
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))
+  const staff = user?.email ? await isStaffUser(supabase, user.email) : false
 
   if (isProtected && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = config.auth.loginUrl
-    url.searchParams.set("next", pathname)
-    return NextResponse.redirect(url)
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = config.auth.loginUrl
+    loginUrl.searchParams.set("next", pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
-  // Si ya hay sesión y va a /login, mándalo al dashboard.
+  if (isProtected && user && !staff) {
+    await supabase.auth.signOut()
+    const denied = request.nextUrl.clone()
+    denied.pathname = config.auth.loginUrl
+    denied.search = ""
+    denied.searchParams.set("error", "unauthorized")
+    return NextResponse.redirect(denied)
+  }
+
   if (user && pathname === config.auth.loginUrl) {
-    const url = request.nextUrl.clone()
-    url.pathname = config.auth.afterLoginUrl
-    return NextResponse.redirect(url)
+    if (!staff) {
+      await supabase.auth.signOut()
+      const denied = request.nextUrl.clone()
+      denied.pathname = config.auth.loginUrl
+      denied.search = ""
+      denied.searchParams.set("error", "unauthorized")
+      return NextResponse.redirect(denied)
+    }
+    const dest = request.nextUrl.clone()
+    dest.pathname = config.auth.afterLoginUrl
+    dest.search = ""
+    return NextResponse.redirect(dest)
   }
 
   return response
